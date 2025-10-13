@@ -24,8 +24,10 @@ fi
 
 # fcitx5を停止
 echo -e "${YELLOW}fcitx5を停止しています...${NC}"
-pkill fcitx5 || true
-sleep 1
+if pgrep -x fcitx5 > /dev/null; then
+    killall -9 fcitx5 2>/dev/null || true
+    sleep 1
+fi
 
 # バックアップを作成
 if [ -d "$FCITX5_CONFIG_DIR" ]; then
@@ -77,6 +79,7 @@ fi
 # fcitx5を起動
 echo -e "${GREEN}fcitx5を起動しています...${NC}"
 fcitx5 -d &
+sleep 1
 
 echo -e "${GREEN}=== 設定の適用が完了しました ===${NC}"
 echo ""
