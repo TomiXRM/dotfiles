@@ -2072,16 +2072,16 @@ modmap("Cond modmap - GUI - Cbk kbd", {
 #     isKBtype('Windows', map='mmap GUI Win')(ctx) and
 #     matchProps(not_clas=terms_and_remotes_Str)(ctx)
 # )
-modmap("Cond modmap - GUI - Mac kbd - multi_lang OFF", {
-    # - Mac Only
-    Key.RIGHT_META:             Key.RIGHT_CTRL,                 # Mac - Multi-language (Remove)
-    Key.RIGHT_CTRL:             Key.RIGHT_META,                 # Mac - Multi-language (Remove)
-}, when = lambda ctx:
-    not cnfg.multi_lang and
-    cnfg.screen_has_focus and
-    isKBtype('Apple', map='mmap GUI Apple ML-OFF')(ctx) and
-    matchProps(not_clas=terms_and_remotes_Str)(ctx)
-)
+# modmap("Cond modmap - GUI - Mac kbd - multi_lang OFF", {
+#     # - Mac Only
+#     Key.RIGHT_META:             Key.RIGHT_CTRL,                 # Mac - Multi-language (Remove)
+#     Key.RIGHT_CTRL:             Key.RIGHT_META,                 # Mac - Multi-language (Remove)
+# }, when = lambda ctx:
+#     not cnfg.multi_lang and
+#     cnfg.screen_has_focus and
+#     isKBtype('Apple', map='mmap GUI Apple ML-OFF')(ctx) and
+#     matchProps(not_clas=terms_and_remotes_Str)(ctx)
+# )
 modmap("Cond modmap - GUI - Mac kbd", {
     # - Mac Only
     Key.LEFT_CTRL:              Key.LEFT_META,                  # Mac
@@ -2214,7 +2214,7 @@ modmap("User - Win kbd - Meta to Alt", {
 }, when = lambda ctx:
     # cnfg.screen_has_focus and
     matchProps(not_clas=remoteStr)(ctx) and
-    matchProps(not_devn="^HHKB")(ctx) and
+    matchProps(not_devn="HHKB")(ctx) and
     isKBtype('Windows', map='user Win Meta->Alt')(ctx)
 )
 
@@ -2226,21 +2226,21 @@ multipurpose_modmap("JIS IME dual-role controls(Windows)", {
 }, when = lambda ctx:
     cnfg.screen_has_focus and
     matchProps(not_clas=remoteStr)(ctx) and
-    matchProps(not_devn="^HHKB")(ctx) and
+    matchProps(not_devn="HHKB")(ctx) and
     isKBtype('Windows', map='mmap terms Win')(ctx)
 )
 
-multipurpose_modmap("JIS IME dual-role controls(HHKB)", {
+multipurpose_modmap("JIS IME dual-role controls(HHKB or Apple)", {
     # Eisu/Muhenkan (left of space) toggles English on tap, Ctrl when held
     Key.LEFT_META:             [Key.MUHENKAN, Key.RIGHT_CTRL],
     # Kana/Henkan (right of space) toggles Japanese on tap, Ctrl when held
     Key.RIGHT_META:               [Key.HENKAN, Key.RIGHT_CTRL],
 }, when = lambda ctx:
-    cnfg.screen_has_focus and
+    # cnfg.screen_has_focus and
     matchProps(not_clas=remoteStr)(ctx) and
-    matchProps(devn="^HHKB")(ctx) and
+    matchProps(devn="HHKB")(ctx) and
     isKBtype('Windows', map='mmap terms Win')(ctx)
-    # isKBtype('Apple', map='mmap terms Apple')(ctx)
+    or isKBtype('Apple', map='mmap terms Apple')(ctx)
 )
 
 
