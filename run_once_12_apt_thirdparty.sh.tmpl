@@ -1,0 +1,54 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping third-party apt install."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping third-party apt install."
+  exit 0
+fi
+
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "apt-get not found; skipping third-party apt install."
+  exit 0
+fi
+
+PACKAGES_FILE="{{ .chezmoi.sourceDir }}/packages/apt_thirdparty.txt"
+if [ ! -f "$PACKAGES_FILE" ]; then
+  echo "Missing packages/apt_thirdparty.txt; nothing to install."
+  exit 0
+fi
+
+mapfile -t packages < <(grep -v -E '^[[:space:]]*#|^[[:space:]]*$' "$PACKAGES_FILE" || true)
+if [ "${#packages[@]}" -eq 0 ]; then
+  echo "packages/apt_thirdparty.txt is empty; nothing to install."
+  exit 0
+fi
+
+echo "Third-party packages list: ${packages[*]}"
+echo "Note: This script does not add third-party repositories."
+echo "If a package is unavailable, add its repo manually and re-run."
+
+sudo apt-get update
+
+for pkg in "${packages[@]}"; do
+  if dpkg -s "$pkg" >/dev/null 2>&1; then
+    echo "Already installed: $pkg"
+    continue
+  fi
+
+  candidate="$(apt-cache policy "$pkg" | awk '/Candidate:/ {print $2}')"
+  if [ -z "$candidate" ] || [ "$candidate" = "(none)" ]; then
+    echo "Package not available yet: $pkg"
+    continue
+  fi
+
+  echo "Installing: $pkg"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$pkg"
+done
+{{- end -}}

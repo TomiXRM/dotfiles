@@ -1,0 +1,4 @@
+# Packages that require extra repositories or manual steps.
+tailscale
+code
+zed

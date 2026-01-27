@@ -1,0 +1,39 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping zsh setup."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping zsh setup."
+  exit 0
+fi
+
+if ! command -v zsh >/dev/null 2>&1; then
+  echo "zsh not found; install it via run_once_10_os_base and re-run."
+  exit 0
+fi
+
+ZSH_PATH="$(command -v zsh)"
+if [ -z "$ZSH_PATH" ]; then
+  echo "zsh path not found; skipping chsh."
+  exit 0
+fi
+
+CURRENT_SHELL="${SHELL:-}"
+if [ "$CURRENT_SHELL" = "$ZSH_PATH" ]; then
+  echo "zsh already set as default shell."
+  exit 0
+fi
+
+echo "Setting default shell to: $ZSH_PATH"
+if chsh -s "$ZSH_PATH" "$USER"; then
+  echo "Default shell updated. Log out and back in to apply."
+else
+  echo "chsh failed. You may need to run: chsh -s $ZSH_PATH"
+fi
+{{- end -}}

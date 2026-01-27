@@ -1,0 +1,40 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping flatpak GUI install."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping flatpak GUI install."
+  exit 0
+fi
+
+if ! command -v flatpak >/dev/null 2>&1; then
+  echo "flatpak not found; install it first (apt) and re-run."
+  exit 0
+fi
+
+PACKAGES_FILE="{{ .chezmoi.sourceDir }}/packages/flatpak.txt"
+if [ ! -f "$PACKAGES_FILE" ]; then
+  echo "Missing packages/flatpak.txt; nothing to install."
+  exit 0
+fi
+
+mapfile -t packages < <(grep -v -E '^[[:space:]]*#|^[[:space:]]*$' "$PACKAGES_FILE" || true)
+if [ "${#packages[@]}" -eq 0 ]; then
+  echo "packages/flatpak.txt is empty; nothing to install."
+  exit 0
+fi
+
+echo "Ensuring flathub remote exists"
+sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+echo "Installing flatpak apps (${#packages[@]}): ${packages[*]}"
+for app in "${packages[@]}"; do
+  sudo flatpak install -y --noninteractive flathub "$app"
+done
+{{- end -}}

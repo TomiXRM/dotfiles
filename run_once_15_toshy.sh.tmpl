@@ -1,0 +1,45 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping toshy install."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping toshy install."
+  exit 0
+fi
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "git not found; install it and re-run."
+  exit 0
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 not found; install it and re-run."
+  exit 0
+fi
+
+TOSHY_DIR="$(mktemp -d -t toshy-XXXXXXXX)"
+cleanup() {
+  rm -rf "$TOSHY_DIR"
+}
+trap cleanup EXIT
+echo "Cloning toshy..."
+git clone https://github.com/RedBearAK/toshy.git "$TOSHY_DIR"
+
+echo "Installing toshy..."
+python3 "$TOSHY_DIR/setup_toshy.py" install
+
+SOURCE_CONFIG="{{ .chezmoi.sourceDir }}/assets/toshy/toshy_config.py"
+if [ -f "$SOURCE_CONFIG" ]; then
+  echo "Applying toshy_config.py..."
+  mkdir -p "$HOME/.config/toshy"
+  cp "$SOURCE_CONFIG" "$HOME/.config/toshy/toshy_config.py"
+else
+  echo "Missing assets/toshy/toshy_config.py; skipping config copy."
+fi
+{{- end -}}

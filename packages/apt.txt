@@ -1,0 +1,17 @@
+git
+python3
+curl
+fcitx5
+fcitx5-mozc
+fcitx5-config-qt
+ffmpeg
+htop
+arp-scan
+net-tools
+can-utils
+gnome-sushi
+gnome-shell-extension-manager
+flatpak
+zsh
+gnome-software-plugin-flatpak
+chrome-gnome-shell
