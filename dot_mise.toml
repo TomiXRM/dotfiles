@@ -8,6 +8,12 @@ uv = "latest"
 # Rust toolchain
 rust = "latest"
 
+# Terminal file manager
+yazi = "latest"
+
+# Family tree tool
+"github:trasta298/keifu" = "latest"
+
 [settings]
 # Enable experimental features
 experimental = true
