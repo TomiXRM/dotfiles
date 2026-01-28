@@ -1,3 +1,13 @@
+# Enable Powerlevel10k instant prompt (should stay close to the top)
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Powerlevel10k theme
+if [[ -f ~/.local/share/powerlevel10k/powerlevel10k.zsh-theme ]]; then
+  source ~/.local/share/powerlevel10k/powerlevel10k.zsh-theme
+fi
+
 setopt HIST_IGNORE_DUPS
 setopt SHARE_HISTORY
 
@@ -17,6 +27,15 @@ alias egrep='egrep --color=auto'
 
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
-if command -v starship >/dev/null 2>&1; then
-  eval "$(starship init zsh)"
+# zsh-autosuggestions
+if [[ -f ~/.local/share/zsh-plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+  source ~/.local/share/zsh-plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
+
+# zsh-syntax-highlighting (must be loaded last)
+if [[ -f ~/.local/share/zsh-plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  source ~/.local/share/zsh-plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
+# Load p10k config if exists
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh

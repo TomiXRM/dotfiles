@@ -1,0 +1,17 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_once_12_powerlevel10k] Started at $(date) ==="
+
+P10K_DIR="${HOME}/.local/share/powerlevel10k"
+
+if [ -d "$P10K_DIR" ]; then
+  echo "Powerlevel10k already installed at $P10K_DIR"
+else
+  echo "Installing Powerlevel10k..."
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+fi
+
+echo "=== [run_once_12_powerlevel10k] Completed ==="
+{{- end -}}

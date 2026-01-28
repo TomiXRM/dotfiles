@@ -1,0 +1,51 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_once_11_nerdfont] Started at $(date) ==="
+
+FONT_DIR="${HOME}/.local/share/fonts"
+mkdir -p "$FONT_DIR"
+
+# MesloLGS NF (recommended by Powerlevel10k)
+FONT_BASE_URL="https://github.com/romkatv/powerlevel10k-media/raw/master"
+
+declare -A FONTS=(
+  ["MesloLGS NF Regular.ttf"]="MesloLGS%20NF%20Regular.ttf"
+  ["MesloLGS NF Bold.ttf"]="MesloLGS%20NF%20Bold.ttf"
+  ["MesloLGS NF Italic.ttf"]="MesloLGS%20NF%20Italic.ttf"
+  ["MesloLGS NF Bold Italic.ttf"]="MesloLGS%20NF%20Bold%20Italic.ttf"
+)
+
+for filename in "${!FONTS[@]}"; do
+  url_name="${FONTS[$filename]}"
+  if [ -f "$FONT_DIR/$filename" ]; then
+    echo "Already exists: $filename"
+  else
+    echo "Downloading: $filename"
+    curl -fsSL -o "$FONT_DIR/$filename" "$FONT_BASE_URL/$url_name"
+  fi
+done
+
+echo "Updating font cache..."
+fc-cache -f "$FONT_DIR"
+
+echo "=== [run_once_11_nerdfont] Completed ==="
+echo ""
+echo "=============================================="
+echo "  IMPORTANT: Terminal Font Configuration"
+echo "=============================================="
+echo ""
+echo "  Please set your terminal font to:"
+echo ""
+echo "    MesloLGS NF"
+echo ""
+echo "  GNOME Terminal:"
+echo "    Preferences > Profiles > Text > Custom font"
+echo ""
+echo "  VSCode:"
+echo "    Settings > Terminal > Font Family: 'MesloLGS NF'"
+echo ""
+echo "=============================================="
+echo ""
+{{- end -}}
