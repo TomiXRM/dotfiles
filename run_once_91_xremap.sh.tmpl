@@ -1,0 +1,31 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_once_91_xremap] Started at $(date) ==="
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping."
+  exit 0
+fi
+
+# Enable xremap GNOME extension (for Toshy window context)
+if command -v gnome-extensions >/dev/null 2>&1; then
+  if gnome-extensions list | grep -q "xremap@k0kubun.com"; then
+    echo "Enabling xremap GNOME extension..."
+    gnome-extensions enable xremap@k0kubun.com || true
+  else
+    echo "xremap extension not found in list; it may need a GNOME Shell restart."
+  fi
+else
+  echo "gnome-extensions command not found; skipping extension enable."
+fi
+
+echo "=== [run_once_91_xremap] Completed ==="
+{{- end -}}
