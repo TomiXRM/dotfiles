@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_11_zsh] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping zsh setup."
   exit 0

@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_12_apt_thirdparty] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping third-party apt install."
   exit 0

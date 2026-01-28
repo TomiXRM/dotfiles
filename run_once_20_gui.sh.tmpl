@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_20_gui] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping flatpak GUI install."
   exit 0

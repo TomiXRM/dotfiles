@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_10_os_base] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping apt base install."
   exit 0

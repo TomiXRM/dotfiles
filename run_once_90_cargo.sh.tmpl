@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_90_cargo] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping cargo install."
   exit 0

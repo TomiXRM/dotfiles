@@ -2,6 +2,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== [run_once_15_toshy] Started at $(date) ==="
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping toshy install."
   exit 0
@@ -34,12 +36,5 @@ git clone https://github.com/RedBearAK/toshy.git "$TOSHY_DIR"
 echo "Installing toshy..."
 python3 "$TOSHY_DIR/setup_toshy.py" install
 
-SOURCE_CONFIG="{{ .chezmoi.sourceDir }}/assets/toshy/toshy_config.py"
-if [ -f "$SOURCE_CONFIG" ]; then
-  echo "Applying toshy_config.py..."
-  mkdir -p "$HOME/.config/toshy"
-  cp "$SOURCE_CONFIG" "$HOME/.config/toshy/toshy_config.py"
-else
-  echo "Missing assets/toshy/toshy_config.py; skipping config copy."
-fi
+echo "toshy_config.py is managed by chezmoi directly."
 {{- end -}}
