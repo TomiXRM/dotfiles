@@ -10,8 +10,8 @@ chezmoi,miseでこれらをインストールしてMac,Ubuntuで対応できる�
   - tailscale(brew,apt)
   - ffmpeg(brew,apt)
 - lang
-  - rust(chezmoi)
-  - uv(chezmoi)
+  - rust(mise)
+  - uv(mise)
 - Embedded-development(いらない時が多いので、選択式にしたい。)
   - arm-none-eabi-gcc(brew,apt)
   - KiCAD(flatpak)

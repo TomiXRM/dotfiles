@@ -1,0 +1,29 @@
+# Database / cache files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Editor / IDE cache
+*.swp
+*.swo
+*~
+.*.un~
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Compiled objects
+*.o
+*.so
+*.dylib
+
+# Logs
+*.log

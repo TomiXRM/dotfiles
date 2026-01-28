@@ -5,6 +5,14 @@ fcitx5
 fcitx5-mozc
 fcitx5-config-qt
 ffmpeg
+7zip
+jq
+poppler-utils
+fd-find
+ripgrep
+fzf
+zoxide
+imagemagick
 htop
 arp-scan
 net-tools

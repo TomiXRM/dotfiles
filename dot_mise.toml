@@ -1,0 +1,16 @@
+# mise configuration
+# See: https://mise.jdx.dev/configuration.html
+
+[tools]
+# Python package manager (replaces pip, poetry, etc)
+uv = "latest"
+
+# Rust toolchain
+rust = "latest"
+
+[settings]
+# Enable experimental features
+experimental = true
+
+# Auto-install missing tools
+missing_tool_behavior = "autoinstall"

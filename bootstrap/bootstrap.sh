@@ -5,6 +5,8 @@ echo "Starting dotfiles bootstrap"
 
 OS="$(uname -s)"
 
+echo "Detected: OS=$OS"
+
 case "$OS" in
   Linux)
     if [ -r /etc/os-release ]; then
@@ -58,6 +60,17 @@ fi
 
 mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
+
+if command -v mise >/dev/null 2>&1; then
+  echo "mise already installed"
+else
+  echo "Installing mise..."
+  curl https://mise.run | sh
+fi
+
+# Activate mise for this script
+eval "$("$HOME/.local/bin/mise" activate bash --shims)" || true
+export PATH="$HOME/.local/share/mise/shims:$PATH"
 
 if command -v chezmoi >/dev/null 2>&1; then
   echo "chezmoi already installed"

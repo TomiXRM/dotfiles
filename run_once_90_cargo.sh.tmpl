@@ -16,8 +16,14 @@ if [ "${ID:-}" != "ubuntu" ]; then
 fi
 
 if ! command -v cargo >/dev/null 2>&1; then
-  echo "cargo not found; install Rust via mise and re-run."
+  echo "cargo not found; Rust should be installed via mise in run_once_80_mise_install.sh."
   exit 0
+fi
+
+# Activate mise to ensure cargo shims are available
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate bash --shims)" || true
+  export PATH="$HOME/.local/share/mise/shims:$PATH"
 fi
 
 PACKAGES_FILE="{{ .chezmoi.sourceDir }}/packages/cargo.txt"

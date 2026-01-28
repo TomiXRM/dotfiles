@@ -21,10 +21,31 @@ if command -v gnome-extensions >/dev/null 2>&1; then
     echo "Enabling xremap GNOME extension..."
     gnome-extensions enable xremap@k0kubun.com || true
   else
-    echo "xremap extension not found in list; it may need a GNOME Shell restart."
+    echo "xremap extension not found in list yet (may need GNOME Shell restart)."
+  fi
+fi
+
+# Add xremap to enabled-extensions via gsettings to ensure it's enabled on next Shell start
+if command -v gsettings >/dev/null 2>&1; then
+  echo "Adding xremap to enabled-extensions list..."
+  CURRENT_EXTS=$(gsettings get org.gnome.shell enabled-extensions)
+  if echo "$CURRENT_EXTS" | grep -q "xremap@k0kubun.com"; then
+    echo "xremap already in enabled-extensions list."
+  else
+    # Add xremap to the list
+    if [ "$CURRENT_EXTS" = "@as []" ]; then
+      # Empty list
+      gsettings set org.gnome.shell enabled-extensions "['xremap@k0kubun.com']"
+      echo "Created enabled-extensions list with xremap."
+    else
+      # Append to existing list (remove trailing ] and add new entry)
+      NEW_EXTS=$(echo "$CURRENT_EXTS" | sed "s/]$/, 'xremap@k0kubun.com']/")
+      gsettings set org.gnome.shell enabled-extensions "$NEW_EXTS"
+      echo "Added xremap to existing enabled-extensions list."
+    fi
   fi
 else
-  echo "gnome-extensions command not found; skipping extension enable."
+  echo "gsettings command not found; skipping."
 fi
 
 echo "=== [run_once_91_xremap] Completed ==="

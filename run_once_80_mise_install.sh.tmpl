@@ -1,0 +1,34 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_once_80_mise_install] Started at $(date) ==="
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping mise install."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping mise install."
+  exit 0
+fi
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "mise not found; please run bootstrap.sh first."
+  exit 0
+fi
+
+# Activate mise for this script
+eval "$(mise activate bash --shims)" || true
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+
+echo "Installing tools defined in ~/.mise.toml..."
+mise install
+
+echo "Verifying installations..."
+mise list || true
+
+echo "=== [run_once_80_mise_install] Completed ==="
+{{- end -}}

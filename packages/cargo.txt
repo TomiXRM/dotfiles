@@ -1,1 +1,8 @@
+# Cargo packages to install
+# One package per line, comments with # are ignored
 
+# Terminal file manager
+yazi-fm
+
+# File viewer
+keifu
