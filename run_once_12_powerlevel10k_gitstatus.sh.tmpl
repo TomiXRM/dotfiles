@@ -1,0 +1,24 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_once_12_powerlevel10k_gitstatus] Started at $(date) ==="
+
+P10K_DIR="${HOME}/.local/share/powerlevel10k"
+GITSTATUS_DIR="${P10K_DIR}/gitstatus"
+
+if [ -d "$GITSTATUS_DIR" ]; then
+  if [ -f "${GITSTATUS_DIR}/install" ]; then
+    echo "Ensuring gitstatusd is installed..."
+    if ! bash "${GITSTATUS_DIR}/install" -f; then
+      echo "gitstatus install failed; check network connectivity."
+    fi
+  else
+    echo "gitstatus install script not found at ${GITSTATUS_DIR}/install"
+  fi
+else
+  echo "Powerlevel10k gitstatus directory not found at ${GITSTATUS_DIR}"
+fi
+
+echo "=== [run_once_12_powerlevel10k_gitstatus] Completed ==="
+{{- end -}}

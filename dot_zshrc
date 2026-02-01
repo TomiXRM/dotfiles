@@ -39,3 +39,16 @@ fi
 
 # Load p10k config if exists
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+# ROS2 (Linux only; guard missing paths)
+if [[ "$OSTYPE" == linux* ]]; then
+  for setup in /opt/ros/*/setup.zsh(N); do
+    source "$setup"
+    export ROS_DOMAIN_ID=7
+    # ZshでROS2コマンドの補完を有効化
+    if [[ -n "$ROS_DISTRO" ]] && [[ -r /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh ]]; then
+      source /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh
+    fi
+    break
+  done
+fi

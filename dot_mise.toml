@@ -18,5 +18,5 @@ yazi = "latest"
 # Enable experimental features
 experimental = true
 
-# Auto-install missing tools
-missing_tool_behavior = "autoinstall"
+# Auto-install missing tools (current setting name)
+not_found_auto_install = true
