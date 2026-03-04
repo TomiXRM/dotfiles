@@ -42,6 +42,8 @@ fi
 
 # ROS2 (Linux only; guard missing paths)
 if [[ "$OSTYPE" == linux* ]]; then
+  autoload -Uz bashcompinit
+  bashcompinit
   for setup in /opt/ros/*/setup.zsh(N); do
     source "$setup"
     export ROS_DOMAIN_ID=7
