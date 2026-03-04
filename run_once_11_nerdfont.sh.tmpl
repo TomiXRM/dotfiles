@@ -1,34 +1,74 @@
-{{- if eq .chezmoi.os "linux" -}}
 #!/usr/bin/env bash
 set -euo pipefail
 
 echo "=== [run_once_11_nerdfont] Started at $(date) ==="
 
+# ==============================================================
+# Font directory (OS-specific)
+# ==============================================================
+{{ if eq .chezmoi.os "linux" -}}
 FONT_DIR="${HOME}/.local/share/fonts"
+{{ else if eq .chezmoi.os "darwin" -}}
+FONT_DIR="${HOME}/Library/Fonts"
+{{ end -}}
 mkdir -p "$FONT_DIR"
 
-# MesloLGS NF (recommended by Powerlevel10k)
-FONT_BASE_URL="https://github.com/romkatv/powerlevel10k-media/raw/master"
-
-declare -A FONTS=(
-  ["MesloLGS NF Regular.ttf"]="MesloLGS%20NF%20Regular.ttf"
-  ["MesloLGS NF Bold.ttf"]="MesloLGS%20NF%20Bold.ttf"
-  ["MesloLGS NF Italic.ttf"]="MesloLGS%20NF%20Italic.ttf"
-  ["MesloLGS NF Bold Italic.ttf"]="MesloLGS%20NF%20Bold%20Italic.ttf"
+# ==============================================================
+# Section 1: Individual TTF files (direct URL download)
+# Add entries as: ["destination filename"]="download URL"
+# ==============================================================
+declare -A DIRECT_FONTS=(
+  ["MesloLGS NF Regular.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf"
+  ["MesloLGS NF Bold.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf"
+  ["MesloLGS NF Italic.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf"
+  ["MesloLGS NF Bold Italic.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf"
 )
 
-for filename in "${!FONTS[@]}"; do
-  url_name="${FONTS[$filename]}"
+for filename in "${!DIRECT_FONTS[@]}"; do
+  url="${DIRECT_FONTS[$filename]}"
   if [ -f "$FONT_DIR/$filename" ]; then
     echo "Already exists: $filename"
   else
     echo "Downloading: $filename"
-    curl -fsSL -o "$FONT_DIR/$filename" "$FONT_BASE_URL/$url_name"
+    curl -fsSL -o "$FONT_DIR/$filename" "$url"
   fi
 done
 
+# ==============================================================
+# Section 2: Nerd Fonts zip archives (from GitHub releases)
+# Add font family names to NERD_FONTS array to install them.
+# Available families: https://github.com/ryanoasis/nerd-fonts/releases
+# ==============================================================
+NERD_FONTS_VERSION="v3.3.0"
+NERD_FONTS=(
+  JetBrainsMono
+  FiraCode
+  Hack
+)
+
+for font in "${NERD_FONTS[@]}"; do
+  font_dir="$FONT_DIR/$font"
+  if [ -d "$font_dir" ] && [ -n "$(ls -A "$font_dir" 2>/dev/null)" ]; then
+    echo "Already exists: $font"
+    continue
+  fi
+  echo "Downloading Nerd Font: $font (${NERD_FONTS_VERSION})"
+  mkdir -p "$font_dir"
+  curl -fsSL \
+    "https://github.com/ryanoasis/nerd-fonts/releases/download/${NERD_FONTS_VERSION}/${font}.zip" \
+    -o "/tmp/${font}.zip"
+  unzip -o "/tmp/${font}.zip" -d "$font_dir/"
+  rm -f "/tmp/${font}.zip"
+  find "$font_dir" -name "*Windows Compatible*" -delete
+done
+
+# ==============================================================
+# Font cache refresh (Linux only; macOS detects fonts automatically)
+# ==============================================================
+{{ if eq .chezmoi.os "linux" -}}
 echo "Updating font cache..."
 fc-cache -f "$FONT_DIR"
+{{ end -}}
 
 echo "=== [run_once_11_nerdfont] Completed ==="
 echo ""
@@ -36,16 +76,19 @@ echo "=============================================="
 echo "  IMPORTANT: Terminal Font Configuration"
 echo "=============================================="
 echo ""
-echo "  Please set your terminal font to:"
+echo "  Installed fonts:"
+echo "    - MesloLGS NF  (recommended for Powerlevel10k)"
+for font in "${NERD_FONTS[@]}"; do
+  echo "    - $font Nerd Font"
+done
 echo ""
-echo "    MesloLGS NF"
+echo "  Set one of the above in your terminal:"
 echo ""
-echo "  GNOME Terminal:"
+echo "  GNOME Terminal / iTerm2 / Warp:"
 echo "    Preferences > Profiles > Text > Custom font"
 echo ""
 echo "  VSCode:"
-echo "    Settings > Terminal > Font Family: 'MesloLGS NF'"
+echo "    Settings > Terminal > Font Family"
 echo ""
 echo "=============================================="
 echo ""
-{{- end -}}
