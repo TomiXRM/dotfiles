@@ -1,0 +1,105 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_10_ubuntu_apt] Started at $(date) ==="
+
+ROS2_ENABLED={{ get (get . "features" | default dict) "ros2" | default false }}
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu apt sync."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu apt sync."
+  exit 0
+fi
+
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "apt-get not found; skipping Ubuntu apt sync."
+  exit 0
+fi
+
+core_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/apt/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+thirdparty_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/apt_thirdparty/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#core_packages[@]}" -eq 0 ] && [ "${#thirdparty_packages[@]}" -eq 0 ]; then
+  echo "No Ubuntu apt packages configured."
+  if [ "$ROS2_ENABLED" = "true" ]; then
+    echo "ROS2 feature is enabled."
+    echo "Follow the official ROS 2 Ubuntu flow documented in {{ .chezmoi.sourceDir }}/docs/ubuntu.md"
+  fi
+  exit 0
+fi
+
+missing_core_packages=()
+for pkg in "${core_packages[@]}"; do
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    missing_core_packages+=("$pkg")
+  fi
+done
+
+pending_thirdparty_packages=()
+for pkg in "${thirdparty_packages[@]}"; do
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    pending_thirdparty_packages+=("$pkg")
+  fi
+done
+
+if [ "${#missing_core_packages[@]}" -eq 0 ] && [ "${#pending_thirdparty_packages[@]}" -eq 0 ]; then
+  echo "Ubuntu apt packages already satisfy manifests; skipping apt-get update."
+  if [ "$ROS2_ENABLED" = "true" ]; then
+    echo "ROS2 feature is enabled."
+    echo "Follow the official ROS 2 Ubuntu flow documented in {{ .chezmoi.sourceDir }}/docs/ubuntu.md"
+  fi
+  exit 0
+fi
+
+sudo apt-get update
+
+if [ "${#missing_core_packages[@]}" -gt 0 ]; then
+  echo "Installing missing Ubuntu core apt packages (${#missing_core_packages[@]}): ${missing_core_packages[*]}"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_core_packages[@]}"
+else
+  echo "Ubuntu core apt packages already installed."
+fi
+
+if [ "${#pending_thirdparty_packages[@]}" -gt 0 ]; then
+  echo "Processing missing Ubuntu third-party apt packages (${#pending_thirdparty_packages[@]}): ${pending_thirdparty_packages[*]}"
+  for pkg in "${pending_thirdparty_packages[@]}"; do
+    candidate="$(apt-cache policy "$pkg" | awk '/Candidate:/ {print $2}')"
+    if [ -z "$candidate" ] || [ "$candidate" = "(none)" ]; then
+      echo "Package not available yet: $pkg"
+      echo "See {{ .chezmoi.sourceDir }}/docs/ubuntu.md for repository setup notes."
+      continue
+    fi
+
+    echo "Installing: $pkg"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$pkg"
+  done
+else
+  echo "Ubuntu third-party apt packages already installed."
+fi
+
+if [ "$ROS2_ENABLED" = "true" ]; then
+  echo "ROS2 feature is enabled."
+  echo "Follow the official ROS 2 Ubuntu flow documented in {{ .chezmoi.sourceDir }}/docs/ubuntu.md"
+fi
+{{- end -}}

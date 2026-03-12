@@ -1,0 +1,105 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_20_ubuntu_gui] Started at $(date) ==="
+
+KICAD_ENABLED={{ get (get . "features" | default dict) "kicad" | default false }}
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu GUI sync."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu GUI sync."
+  exit 0
+fi
+
+apt_gui_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/apt/gui.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+flatpak_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/flatpak/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+{{- if eq (printf "%v" (get (get . "features" | default dict) "kicad" | default false)) "true" }}
+{{- range (splitList "\n" (include "packages/ubuntu/flatpak/kicad.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#apt_gui_packages[@]}" -eq 0 ] && [ "${#flatpak_packages[@]}" -eq 0 ]; then
+  echo "No Ubuntu GUI packages configured."
+  exit 0
+fi
+
+missing_apt_gui_packages=()
+for pkg in "${apt_gui_packages[@]}"; do
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    missing_apt_gui_packages+=("$pkg")
+  fi
+done
+
+missing_flatpak_packages=()
+if [ "${#flatpak_packages[@]}" -gt 0 ]; then
+  if command -v flatpak >/dev/null 2>&1; then
+    for app in "${flatpak_packages[@]}"; do
+      if ! flatpak info --system "$app" >/dev/null 2>&1 && ! flatpak info "$app" >/dev/null 2>&1; then
+        missing_flatpak_packages+=("$app")
+      fi
+    done
+  else
+    missing_flatpak_packages=("${flatpak_packages[@]}")
+  fi
+fi
+
+if [ "${#missing_apt_gui_packages[@]}" -eq 0 ] && [ "${#missing_flatpak_packages[@]}" -eq 0 ]; then
+  echo "Ubuntu GUI packages already satisfy manifests; skipping apt-get update and flatpak installs."
+  exit 0
+fi
+
+if [ "${#missing_apt_gui_packages[@]}" -gt 0 ]; then
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get not found; skipping Ubuntu GUI apt packages."
+  else
+    sudo apt-get update
+    echo "Installing missing Ubuntu GUI apt packages (${#missing_apt_gui_packages[@]}): ${missing_apt_gui_packages[*]}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_apt_gui_packages[@]}"
+  fi
+else
+  echo "Ubuntu GUI apt packages already installed."
+fi
+
+if [ "${#missing_flatpak_packages[@]}" -gt 0 ]; then
+  if ! command -v flatpak >/dev/null 2>&1; then
+    echo "flatpak not found; install GUI apt packages first and re-run."
+    exit 0
+  fi
+
+  echo "Ensuring flathub remote exists"
+  sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  echo "Installing missing Ubuntu flatpak apps (${#missing_flatpak_packages[@]}): ${missing_flatpak_packages[*]}"
+  local_app=""
+  for local_app in "${missing_flatpak_packages[@]}"; do
+    sudo flatpak install -y --noninteractive flathub "$local_app"
+  done
+else
+  echo "Ubuntu flatpak apps already installed."
+fi
+{{- end -}}

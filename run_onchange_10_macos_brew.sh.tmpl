@@ -1,0 +1,30 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_10_macos_brew] Started at $(date) ==="
+
+if ! command -v brew >/dev/null 2>&1; then
+  echo "brew not found; install Homebrew and re-run chezmoi apply."
+  echo "See {{ .chezmoi.sourceDir }}/docs/macos.md"
+  exit 0
+fi
+
+brew_packages=(
+{{- range (splitList "\n" (include "packages/macos/brew/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#brew_packages[@]}" -eq 0 ]; then
+  echo "No macOS brew packages configured."
+  exit 0
+fi
+
+brew update
+echo "Installing macOS brew packages (${#brew_packages[@]}): ${brew_packages[*]}"
+brew install "${brew_packages[@]}"
+{{- end -}}

@@ -1,0 +1,40 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_20_macos_cask] Started at $(date) ==="
+
+KICAD_ENABLED={{ get (get . "features" | default dict) "kicad" | default false }}
+
+if ! command -v brew >/dev/null 2>&1; then
+  echo "brew not found; install Homebrew and re-run chezmoi apply."
+  echo "See {{ .chezmoi.sourceDir }}/docs/macos.md"
+  exit 0
+fi
+
+cask_packages=(
+{{- range (splitList "\n" (include "packages/macos/cask/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+{{- if eq (printf "%v" (get (get . "features" | default dict) "kicad" | default false)) "true" }}
+{{- range (splitList "\n" (include "packages/macos/cask/kicad.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#cask_packages[@]}" -eq 0 ]; then
+  echo "No macOS cask packages configured."
+  exit 0
+fi
+
+brew update
+echo "Installing macOS cask packages (${#cask_packages[@]}): ${cask_packages[*]}"
+brew install --cask "${cask_packages[@]}"
+{{- end -}}

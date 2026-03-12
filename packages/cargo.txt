@@ -1,2 +1,0 @@
-# Cargo packages to install
-# One package per line, comments with # are ignored

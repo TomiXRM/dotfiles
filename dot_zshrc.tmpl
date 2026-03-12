@@ -13,7 +13,11 @@ plugins=(
 HISTSIZE=10000
 SAVEHIST=10000
 
-source $ZSH/oh-my-zsh.sh
+if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
+  source "$ZSH/oh-my-zsh.sh"
+else
+  echo "oh-my-zsh not found at $ZSH; continuing without it." >&2
+fi
 
 alias ll='ls -alF'
 alias la='ls -A'
@@ -26,17 +30,28 @@ if type starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
 
-# ROS2 (Linux only; guard missing paths)
+{{- $ros2Enabled := get (get . "features" | default dict) "ros2" | default false }}
+{{- if $ros2Enabled }}
+# ROS2 (Linux only; enabled through chezmoi feature flag)
 if [[ "$OSTYPE" == linux* ]]; then
   autoload -Uz bashcompinit
   bashcompinit
+
+  ros_setup_found=false
   for setup in /opt/ros/*/setup.zsh(N); do
     source "$setup"
     export ROS_DOMAIN_ID=7
-    # ZshでROS2コマンドの補完を有効化
+    ros_setup_found=true
+
+    # Enable ROS2 shell completion if available.
     if [[ -n "$ROS_DISTRO" ]] && [[ -r /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh ]]; then
       source /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh
     fi
     break
   done
+
+  if [[ "$ros_setup_found" != true ]]; then
+    echo "ROS2 feature is enabled, but no /opt/ros/*/setup.zsh was found." >&2
+  fi
 fi
+{{- end }}

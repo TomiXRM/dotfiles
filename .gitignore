@@ -4,6 +4,9 @@
 *.db-wal
 *.sqlite
 *.sqlite3
+.vscode/*.db
+.vscode/*.db-shm
+.vscode/*.db-wal
 
 # OS generated
 .DS_Store
@@ -27,3 +30,6 @@ __pycache__/
 
 # Logs
 *.log
+
+# Local tooling state
+.serena/

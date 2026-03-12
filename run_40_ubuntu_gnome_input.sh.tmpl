@@ -1,0 +1,39 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_40_ubuntu_gnome_input] Started at $(date) ==="
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu GNOME input hooks."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu GNOME input hooks."
+  exit 0
+fi
+
+if ! command -v gnome-extensions >/dev/null 2>&1; then
+  echo "gnome-extensions not found; skipping xremap enablement."
+  exit 0
+fi
+
+if ! gnome-extensions list >/dev/null 2>&1; then
+  echo "GNOME Shell session not ready; skipping xremap enablement for now."
+  exit 0
+fi
+
+if ! gnome-extensions list | grep -q '^xremap@k0kubun\.com$'; then
+  echo "xremap extension not present in GNOME Shell yet."
+  exit 0
+fi
+
+echo "Enabling xremap GNOME extension..."
+if gnome-extensions enable xremap@k0kubun.com; then
+  echo "xremap GNOME extension is enabled."
+else
+  echo "gnome-extensions enable failed; retry from an active GNOME session."
+fi
+{{- end -}}
