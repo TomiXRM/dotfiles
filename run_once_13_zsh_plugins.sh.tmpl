@@ -4,25 +4,12 @@ set -euo pipefail
 
 echo "=== [run_once_13_zsh_plugins] Started at $(date) ==="
 
-ZSH_PLUGINS_DIR="${HOME}/.local/share/zsh-plugins"
-mkdir -p "$ZSH_PLUGINS_DIR"
-
-# zsh-autosuggestions
-AUTOSUGGESTIONS_DIR="${ZSH_PLUGINS_DIR}/zsh-autosuggestions"
-if [ -d "$AUTOSUGGESTIONS_DIR" ]; then
-  echo "zsh-autosuggestions already installed at $AUTOSUGGESTIONS_DIR"
-else
-  echo "Installing zsh-autosuggestions..."
-  git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git "$AUTOSUGGESTIONS_DIR"
-fi
-
-# zsh-syntax-highlighting
-SYNTAX_HIGHLIGHTING_DIR="${ZSH_PLUGINS_DIR}/zsh-syntax-highlighting"
-if [ -d "$SYNTAX_HIGHLIGHTING_DIR" ]; then
-  echo "zsh-syntax-highlighting already installed at $SYNTAX_HIGHLIGHTING_DIR"
-else
-  echo "Installing zsh-syntax-highlighting..."
-  git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$SYNTAX_HIGHLIGHTING_DIR"
+# Plugins are now managed by .chezmoiexternal.toml (git-repo type).
+# Clean up old plugin directory if it exists.
+OLD_ZSH_PLUGINS_DIR="${HOME}/.local/share/zsh-plugins"
+if [ -d "$OLD_ZSH_PLUGINS_DIR" ]; then
+  echo "Removing old zsh-plugins directory: $OLD_ZSH_PLUGINS_DIR"
+  rm -rf "$OLD_ZSH_PLUGINS_DIR"
 fi
 
 echo "=== [run_once_13_zsh_plugins] Completed ==="

@@ -14,28 +14,7 @@ FONT_DIR="${HOME}/Library/Fonts"
 mkdir -p "$FONT_DIR"
 
 # ==============================================================
-# Section 1: Individual TTF files (direct URL download)
-# Add entries as: ["destination filename"]="download URL"
-# ==============================================================
-declare -A DIRECT_FONTS=(
-  ["MesloLGS NF Regular.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf"
-  ["MesloLGS NF Bold.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf"
-  ["MesloLGS NF Italic.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Italic.ttf"
-  ["MesloLGS NF Bold Italic.ttf"]="https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold%20Italic.ttf"
-)
-
-for filename in "${!DIRECT_FONTS[@]}"; do
-  url="${DIRECT_FONTS[$filename]}"
-  if [ -f "$FONT_DIR/$filename" ]; then
-    echo "Already exists: $filename"
-  else
-    echo "Downloading: $filename"
-    curl -fsSL -o "$FONT_DIR/$filename" "$url"
-  fi
-done
-
-# ==============================================================
-# Section 2: Nerd Fonts zip archives (from GitHub releases)
+# Nerd Fonts zip archives (from GitHub releases)
 # Add font family names to NERD_FONTS array to install them.
 # Available families: https://github.com/ryanoasis/nerd-fonts/releases
 # ==============================================================
@@ -77,7 +56,6 @@ echo "  IMPORTANT: Terminal Font Configuration"
 echo "=============================================="
 echo ""
 echo "  Installed fonts:"
-echo "    - MesloLGS NF  (recommended for Powerlevel10k)"
 for font in "${NERD_FONTS[@]}"; do
   echo "    - $font Nerd Font"
 done
