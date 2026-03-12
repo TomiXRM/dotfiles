@@ -1,63 +1,67 @@
-# Repository Guidelines
+# リポジトリ運用メモ
 
-## Project Structure
-- `README.md` is a short entrypoint for humans.
-- `docs/architecture.md` is the primary design document and the source of truth for the v2 repository model.
-- `docs/ubuntu.md` contains Ubuntu-specific workflow notes.
-- `docs/macos.md` is a validation memo for future macOS verification.
-- Deployable `chezmoi` source files live at repo root using standard conventions such as `dot_*`, `private_*`, `run_onchange_*`, and `run_once_*`.
-- Repository-only materials live under paths such as `docs/`, `packages/`, `assets/`, and `.vscode/` and must not be deployed into `$HOME`.
-- Windows-specific files may exist under `assets/windows/`, but Windows is not a supported target yet.
+## 構成
 
-## Supported Platforms
-- `Ubuntu`: primary target
-- `macOS`: supported target
-- `Windows`: unsupported for now
+- `README.md` は人間向けの短い入口
+- `docs/architecture.md` は v2 設計の一次情報
+- `docs/ubuntu.md` は Ubuntu 固有メモ
+- `docs/macos.md` は macOS 検証メモ
+- 配置対象は root の `dot_*`, `private_*`, `run_onchange_*`, `run_once_*`, `run_*`
+- repo 専用の資料や資産は `docs/`, `packages/`, `assets/`, `.vscode/` に置く
+- Windows 用ファイルは `assets/windows/` に置くが、Windows 自体はまだ正式対応しない
 
-## Entry Commands
-- Fresh machine:
+## 対応 OS
+
+- `Ubuntu`: 主対象
+- `macOS`: 対応対象
+- `Windows`: 未対応
+
+## 入口コマンド
+
+- 新規マシン:
   - `sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>`
-- If `chezmoi` is already installed:
+- `chezmoi` 導入済み:
   - `chezmoi init --apply <github-user-or-repo-url>`
-- User-space runtime installation is explicit:
+- ユーザー空間 runtime 導入:
   - `mise install`
 
-## Script Conventions
-- Use `run_onchange_*` for repeatable, manifest-driven operations such as `apt`, `brew`, `cask`, `flatpak`, or Ubuntu input-layer sync.
-- Use `run_once_*` only for lightweight one-time actions such as `chsh`.
-- Do not run `mise install` from `run_once_*` or `run_onchange_*`.
-- Do not run `cargo install` as part of the default apply flow.
-- Keep scripts explicit and OS-scoped instead of building a single abstraction layer across platforms.
+## Script ルール
 
-## Feature Flags
-- Optional toolsets are controlled by local machine data in `~/.config/chezmoi/chezmoi.toml`.
-- Current feature flags:
-  - `features.ros2`: Ubuntu only
-  - `features.kicad`: optional
-- `features.ros2` uses the official ROS 2 Ubuntu flow rather than the normal package manifests.
-- Prefer explicit feature flags over hostname-based behavior or ad hoc branching.
+- `run_onchange_*` は manifest 駆動の再実行可能な処理に使う
+- `run_once_*` は `chsh` のような軽い一回処理だけに使う
+- `run_*` は GUI セッション依存の軽処理に使う
+- `mise install` は script に入れない
+- `cargo install` は標準 apply flow に入れない
+- script は OS ごとに分離し、責務を狭く保つ
 
-## Repository Boundaries
-- Before adding a new top-level file, decide whether it is:
-  - deployable by `chezmoi`, or
-  - repository-only
-- Repository-only files must be excluded via `.chezmoiignore.tmpl`.
-- Do not let docs, package manifests, editor caches, or local tool state leak into managed `$HOME` targets.
+## 機能フラグ
 
-## Verification
-- There is no full automated test suite yet.
-- Minimum verification for script/documentation changes:
-  - `bash -n` for shell files
-  - `chezmoi execute-template < file.tmpl | bash -n` for rendered shell templates
-  - `jq empty` for JSON files
-  - `python3 -m py_compile` for Python-based config files
-- When changing architecture or workflow, keep `README.md` and `docs/architecture.md` aligned.
+- 任意機能は `~/.config/chezmoi/chezmoi.toml` で制御する
+- 現在の機能:
+  - `features.ros2`: Ubuntu 専用
+  - `features.kicad`: 任意
+- `features.ros2` は ROS 2 の自動 install ではなく、ROS-aware な設定分岐のために使う
 
-## Commit & PR Guidelines
-- Use short, imperative commit messages.
-- Keep changes scoped to one concern when possible.
-- For larger changes, document:
-  - target OS
-  - feature flags involved
-  - exact setup or verification steps
-  - any manual follow-up actions required after `chezmoi apply`
+## リポジトリ境界
+
+- root に file を追加する前に、配置対象か repo 専用かを決める
+- repo 専用なら `.chezmoiignore.tmpl` に入れる
+- docs, package manifest, editor cache, local state を `$HOME` に漏らさない
+
+## 最低限の確認
+
+- shell script: `bash -n`
+- template script: `chezmoi execute-template < file.tmpl | bash -n`
+- JSON: `jq empty`
+- Python config: `python3 -m py_compile`
+- 設計変更時は `README.md` と `docs/architecture.md` を合わせる
+
+## コミット
+
+- commit message は短く命令形
+- 変更は可能な限り 1 関心に絞る
+- 大きい変更では次を明記する
+  - 対象 OS
+  - 機能フラグ
+  - 検証手順
+  - `chezmoi apply` 後の手動作業

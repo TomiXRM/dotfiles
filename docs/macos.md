@@ -1,21 +1,23 @@
-# macOS Notes
+# macOS メモ
 
-macOS support exists in the repository design, but it has not been validated on a real machine yet.
+macOS 対応は repo 内に構造がありますが、まだ実機検証していません。
 
-Current intended behavior:
+## 想定している挙動
 
-- `brew` is assumed to be preinstalled
-- [run_onchange_10_macos_brew.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_10_macos_brew.sh.tmpl) installs CLI packages from [packages/macos/brew/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/brew/core.txt)
-- [run_onchange_20_macos_cask.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_20_macos_cask.sh.tmpl) installs GUI packages from [packages/macos/cask/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/core.txt)
-- `features.kicad = true` adds [packages/macos/cask/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/kicad.txt)
-- `features.ros2` is ignored on macOS
+- `brew` は事前導入済みを前提にする
+- [run_onchange_10_macos_brew.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_10_macos_brew.sh.tmpl) が [packages/macos/brew/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/brew/core.txt) を処理する
+- [run_onchange_20_macos_cask.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_20_macos_cask.sh.tmpl) が [packages/macos/cask/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/core.txt) を処理する
+- `features.kicad = true` の時だけ [packages/macos/cask/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/kicad.txt) を追加する
+- `features.ros2` は macOS では無視する
 
-Validation to do on a real Mac:
+## 検証したいこと
 
-- confirm Homebrew formula names in [packages/macos/brew/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/brew/core.txt)
-- confirm cask names in [packages/macos/cask/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/core.txt)
-- confirm [run_once_10_shell.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_once_10_shell.sh.tmpl) behaves sensibly when `zsh` is already the default shell
-- confirm [dot_zprofile](/home/tomixrm/.local/share/chezmoi/dot_zprofile) and [dot_zshrc.tmpl](/home/tomixrm/.local/share/chezmoi/dot_zshrc.tmpl) do not interfere with the default macOS shell setup
-- decide whether VS Code command-line setup should stay manual on macOS
+- [packages/macos/brew/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/brew/core.txt) の formula 名が正しいか
+- [packages/macos/cask/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/core.txt) の cask 名が正しいか
+- [run_once_10_shell.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_once_10_shell.sh.tmpl) が、すでに `zsh` を使っている macOS で自然に振る舞うか
+- [dot_zprofile](/home/tomixrm/.local/share/chezmoi/dot_zprofile) と [dot_zshrc.tmpl](/home/tomixrm/.local/share/chezmoi/dot_zshrc.tmpl) が標準の macOS shell setup を壊さないか
+- VS Code CLI 周りを手動運用のままにするかどうか
 
-Until that validation is complete, treat macOS support as planned rather than fully verified.
+## 現時点の扱い
+
+macOS は「設計済み・未検証」です。実機で検証が終わるまでは、Ubuntu と同じ完成度だとみなさないでください。

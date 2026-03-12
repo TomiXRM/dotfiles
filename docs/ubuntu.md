@@ -1,62 +1,89 @@
-# Ubuntu Notes
+# Ubuntu メモ
 
-This document describes the intended Ubuntu behavior for the v2 repository.
+この文書は Ubuntu 向けの v2 運用メモです。
 
-This flow was validated on an Ubuntu machine on March 13, 2026.
+2026年3月13日に Ubuntu 実機で検証済みです。
 
-## Target Assumptions
+## 前提
 
-- target distro: Ubuntu 24.04 (`noble`)
+- 対象 distro: Ubuntu 24.04 (`noble`)
 - desktop environment: GNOME
 - shell: `zsh`
-- input stack: `fcitx5` + `mozc` + `Toshy` + managed `xremap` extension
+- 入力系: `fcitx5` + `mozc` + `Toshy` + `xremap` GNOME extension
 
-## Ubuntu Layers
+## Ubuntu レイヤ
+
+```mermaid
+flowchart TB
+    A["10_ubuntu_apt<br/>core apt / third-party apt"]
+    B["20_ubuntu_gui<br/>GUI apt / flatpak"]
+    C["30_ubuntu_input<br/>input apt / Toshy"]
+    D["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
+    E["手動<br/>mise install / ROS 2"]
+
+    A --> B --> C --> D --> E
+```
 
 ### 1. Core apt
 
-Managed by:
+管理対象:
 
 - [run_onchange_10_ubuntu_apt.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_10_ubuntu_apt.sh.tmpl)
 - [packages/ubuntu/apt/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/core.txt)
+- [packages/ubuntu/apt_thirdparty/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt_thirdparty/core.txt)
 
-This layer contains repeatable CLI and system packages that should exist on every Ubuntu machine managed by this repo.
+役割:
 
-When every manifest entry is already installed, the script skips `apt-get update`.
+- どの Ubuntu マシンにも必要な CLI / system package を揃える
+- `tailscale` や `code` のような third-party package を扱う
 
-### 2. GUI apt and flatpak
+補足:
 
-Managed by:
+- manifest が満たされていれば `apt-get update` をスキップする
+- third-party package は repo 追加済みであることを前提にする
+
+### 2. GUI apt と flatpak
+
+管理対象:
 
 - [run_onchange_20_ubuntu_gui.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_20_ubuntu_gui.sh.tmpl)
 - [packages/ubuntu/apt/gui.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/gui.txt)
 - [packages/ubuntu/flatpak/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/core.txt)
 - [packages/ubuntu/flatpak/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/kicad.txt)
 
-`features.kicad = true` adds KiCad through flatpak.
+役割:
 
-When the configured apt and flatpak entries are already present, the script skips both `apt-get update` and flatpak installs.
+- `flatpak` など GUI 基盤を揃える
+- `features.kicad = true` の時だけ KiCad を入れる
+
+補足:
+
+- apt と flatpak の両方が満たされていれば、update / install をスキップする
 
 ### 3. Input stack
 
-Managed by:
+管理対象:
 
 - [run_onchange_30_ubuntu_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_30_ubuntu_input.sh.tmpl)
 - [run_40_ubuntu_gnome_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_40_ubuntu_gnome_input.sh.tmpl)
 - [packages/ubuntu/apt/input.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/input.txt)
 
-This layer installs:
+役割:
 
 - `fcitx5`
 - `fcitx5-mozc`
 - `fcitx5-config-qt`
-- Toshy using its upstream installer, currently tracking the `TOSHY_REF` value in [run_onchange_30_ubuntu_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_30_ubuntu_input.sh.tmpl)
-- existing Toshy installs are treated as satisfied unless the desired `TOSHY_REF` changes
-- xremap GNOME enablement is retried by a lightweight `run_*` script so it can succeed later from an active GNOME session
+- Toshy の install / 状態管理
+- xremap GNOME extension の有効化
 
-When the manifest packages are already installed, this layer skips `apt-get update` and only evaluates the Toshy state logic.
+補足:
 
-The following files are deployed directly by `chezmoi`:
+- input package が入っていれば `apt-get update` をスキップする
+- Toshy は `TOSHY_REF` を見て状態を管理する
+- 既存 install が desired ref を満たしていれば再 install しない
+- GNOME extension の有効化は `run_*` に分け、GUI セッションがある時に再試行できるようにしている
+
+## 配置される設定ファイル
 
 - [dot_xinputrc](/home/tomixrm/.local/share/chezmoi/dot_xinputrc)
 - [private_profile](/home/tomixrm/.local/share/chezmoi/private_dot_config/private_fcitx5/private_profile)
@@ -67,7 +94,7 @@ The following files are deployed directly by `chezmoi`:
 
 ## Feature Flags
 
-Machine-local feature flags live in:
+マシンローカルな機能フラグ:
 
 `~/.config/chezmoi/chezmoi.toml`
 
@@ -79,65 +106,77 @@ kicad = false
 
 ### `kicad`
 
-- Ubuntu optional
-- when `true`, KiCad is installed from [packages/ubuntu/flatpak/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/kicad.txt)
+- Ubuntu 任意
+- `true` の時、[packages/ubuntu/flatpak/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/kicad.txt) から KiCad を入れる
 
 ### `ros2`
 
-- Ubuntu optional
-- does not auto-install from the standard `run_onchange` package manifests
-- enables ROS-related shell configuration in generated dotfiles
-- follow the official ROS 2 Jazzy Ubuntu instructions instead
+- Ubuntu 任意
+- 通常の `run_onchange` manifest では install しない
+- 生成される shell config で ROS-aware な挙動を有効にする
+- ROS 2 の install 自体は公式手順に従う
 
-Official ROS 2 docs:
+公式ドキュメント:
 
-- ROS 2 Jazzy installation overview: https://docs.ros.org/en/jazzy/Installation.html
-- Ubuntu deb packages: https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
+- ROS 2 Jazzy overview: https://docs.ros.org/en/jazzy/Installation.html
+- Ubuntu deb install: https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 
-Recommended package choice from the official docs:
+推奨パッケージ:
 
-- `ros-jazzy-desktop` for a full desktop install
-- `ros-jazzy-ros-base` if a bare-bones install is enough
+- `ros-jazzy-desktop`
+- `ros-jazzy-ros-base`
 
-Important:
+重要:
 
-- `features.ros2 = true` does not install ROS 2 by itself
-- it only tells this repository to treat the machine as ROS-aware
-- the generated shell config will only activate ROS if `/opt/ros/*/setup.zsh` exists
+- `features.ros2 = true` だけでは ROS 2 は install されない
+- `/opt/ros/*/setup.zsh` が存在する時だけ shell 側で有効化される
 
-## Third-Party Packages
+## Third-party package
 
-Managed by:
+管理対象:
 
 - [packages/ubuntu/apt_thirdparty/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt_thirdparty/core.txt)
 
-These package names are allowed in the package sync flow, but the required repositories must exist first.
-
-Current third-party packages:
+現在の対象:
 
 - `tailscale`
 - `code`
 
-Official installation docs:
+公式導入ページ:
 
-- Tailscale Linux: https://tailscale.com/docs/install/linux
-- VS Code download/install: https://code.visualstudio.com/download
-- Zed Linux installation: https://zed.dev/docs/installation
+- Tailscale: https://tailscale.com/docs/install/linux
+- VS Code: https://code.visualstudio.com/download
+- Zed: https://zed.dev/docs/installation
 
-Zed is intentionally documented as a manual follow-up item for now instead of an automatic Ubuntu package.
+Zed は今のところ Ubuntu では手動後処理扱いです。
 
-## Post-Apply Manual Steps
+## apply 後の手動手順
 
-After `chezmoi init --apply` or `chezmoi apply`:
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as chezmoi
+    participant M as mise
+    participant R as ROS 2
+    participant G as GNOME
 
-1. If the login shell changed, log out and back in.
-2. Run `mise install` to install the tools declared in [dot_mise.toml](/home/tomixrm/.local/share/chezmoi/dot_mise.toml).
-3. If `features.ros2 = true`, follow the official ROS 2 Ubuntu installation docs.
-4. If the GNOME extension is not immediately active, restart the GNOME session and re-run `chezmoi apply` so [run_40_ubuntu_gnome_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_40_ubuntu_gnome_input.sh.tmpl) can retry enablement.
+    U->>C: chezmoi apply
+    C-->>U: Ubuntu scripts 完了
+    U->>M: mise install
+    U->>R: 必要なら公式手順で ROS 2 導入
+    U->>G: 必要ならログインし直し / apply 再実行
+```
 
-## Validation Checklist
+手順:
 
-Base validation:
+1. login shell が変わった場合はログアウトして入り直す
+2. `mise install` を実行する
+3. `features.ros2 = true` の場合は公式 ROS 2 手順を実行する
+4. xremap extension が有効になっていなければ、GNOME セッションを再起動して `chezmoi apply` を再実行する
+
+## 確認項目
+
+基本確認:
 
 - `echo "$SHELL"`
 - `command -v mise`
@@ -145,14 +184,12 @@ Base validation:
 - `test -f ~/.config/toshy/toshy_config.py`
 - `gsettings get org.gnome.shell enabled-extensions`
 
-Optional validation:
+任意確認:
 
 - `flatpak list | grep org.kicad.KiCad`
 - `ros2 --help`
 
-## Known Follow-Up Items
+## 今後の論点
 
-- Decide whether `mise` tools should stay on `latest` or be pinned later
-- Decide whether Toshy should be pinned to a tag or commit instead of tracking `main`
-- Verify whether additional Ubuntu-native packages are needed specifically for Toshy on fresh machines
-- Decide whether Zed should remain manual on Ubuntu or be modeled through a supported package path later
+- fresh machine に Toshy 用追加 package が必要か
+- Zed を Ubuntu でどう扱うか

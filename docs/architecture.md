@@ -1,159 +1,208 @@
-# chezmoi v2 Architecture
+# chezmoi v2 設計
 
-## Status
+## 状態
 
-This document describes the v2 architecture that now drives the repository.
+この文書は、現在の v2 設計の正本です。
 
-Status as of March 13, 2026:
+2026年3月13日時点の状態:
 
-- Ubuntu has been restructured around this model and validated with `chezmoi apply`
-- macOS follows the same high-level design, but still needs real-machine verification
-- Treat this file as the source of truth when future work changes the repository layout or execution model
+- Ubuntu はこの設計に沿って再構成済み
+- Ubuntu では `chezmoi apply` による実機検証まで完了
+- macOS は同じ設計で組んでいるが、実機検証はこれから
 
-## Goals
+## 目的
 
-- Keep `chezmoi` readable, predictable, and maintainable over multiple years
-- Support `Ubuntu` and `macOS` cleanly without pretending they are the same platform
-- Keep repository-only files out of `$HOME`
-- Make optional toolsets explicit and machine-local
-- Make maintenance repeatable for humans and LLM agents
+- `chezmoi` の責務を明確にする
+- `Ubuntu` と `macOS` を無理に同一化しない
+- repo 専用ファイルを `$HOME` に漏らさない
+- 任意機能を機械ごとの明示設定で切り替える
+- 数年後でも人間と LLM agent が同じ理解で保守できる状態を保つ
 
-## Supported Platforms
+## 対象
 
-- `Ubuntu`: primary target
-- `macOS`: supported target
-- `Windows`: not supported yet
+- `Ubuntu`: 主対象
+- `macOS`: 対応対象
+- `Windows`: 未対応
 
-Windows-specific files may be stored in the repository as assets, but they must not be deployed into `$HOME` by `chezmoi`.
+Windows 用ファイルは Git 管理してよいですが、`chezmoi` が `$HOME` に配置してはいけません。
 
-## Non-Goals
+## 非目標
 
-- Full Windows provisioning
-- A custom bootstrap script as the primary entrypoint
-- Automatic installation of every developer runtime during `chezmoi apply`
-- Automatic removal of previously-installed optional packages when a feature is disabled
-- Hidden host-specific behavior based on machine names
+- Windows の完全自動構築
+- repo 独自 bootstrap script を正規入口にすること
+- `chezmoi apply` 中にすべての開発用 runtime を自動導入すること
+- feature を無効化した時に自動 uninstall すること
+- hostname ベースの暗黙分岐
 
-## Entry Model
+## 全体像
 
-The default entrypoint is the official `chezmoi` flow.
+```mermaid
+flowchart TB
+    Repo[chezmoi リポジトリ]
+    Deploy[配置対象]
+    RepoOnly[repo 専用]
+    Local[マシンごとのローカル設定]
+    Home[$HOME]
+    Scripts[スクリプト]
 
-Fresh machine:
+    Repo --> Deploy
+    Repo --> RepoOnly
+    Repo --> Local
+
+    Deploy --> Home
+    Deploy --> Scripts
+
+    RepoOnly --> Docs[docs / packages / assets / .vscode]
+    Local --> Features[~/.config/chezmoi/chezmoi.toml]
+```
+
+## 実行モデル
+
+正規入口は `chezmoi` の公式フローです。
+
+新規マシン:
 
 ```bash
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>
 ```
 
-Machine with `chezmoi` already installed:
+`chezmoi` 導入済み:
 
 ```bash
 chezmoi init --apply <github-user-or-repo-url>
 ```
 
-No repository-specific bootstrap script is required for normal setup.
+repo 固有の bootstrap script は通常不要です。
 
-## Separation of Responsibilities
+## 実行順
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as chezmoi
+    participant F as Files
+    participant P as Package Scripts
+    participant G as GUI 後処理
+    participant M as mise
+
+    U->>C: init --apply / apply
+    C->>F: dotfiles と template を配置
+    C->>P: run_onchange_* を実行
+    P-->>C: package manifests に従って同期
+    C->>C: run_once_* を実行
+    C->>G: run_* を実行
+    G-->>C: セッション依存の軽処理を再試行
+    C-->>U: apply 完了
+    U->>M: mise install
+```
+
+## 責務分離
 
 ### `chezmoi`
 
-`chezmoi` is responsible for:
+`chezmoi` の責務:
 
-- Deploying dotfiles into `$HOME`
-- Rendering templates from local machine data
-- Running lightweight orchestration scripts
-- Triggering repeatable OS package sync from declarative package lists
+- dotfiles を `$HOME` に配置する
+- local data を使って template を render する
+- 軽量な script を実行する
+- manifest 駆動の package 同期を起動する
 
-`chezmoi` is not responsible for:
+`chezmoi` の責務ではないもの:
 
-- Acting as a full replacement for configuration management systems
-- Hiding platform-specific behavior behind a fake abstraction layer
-- Installing every user-space developer tool automatically
+- 完全な構成管理ツールの代替
+- OS 差分を隠すための過剰な抽象化
+- すべての runtime の自動導入
 
-### OS Package Managers
+### OS package manager
 
-OS-level packages are installed by platform-specific `run_onchange_*` scripts.
+OS レベルの package は OS ごとの `run_onchange_*` script で扱います。
 
-- Ubuntu: `apt`, `flatpak`, third-party package sources if explicitly modeled
+- Ubuntu: `apt`, `flatpak`
 - macOS: `brew`, `cask`
 
-These scripts are allowed to run during `chezmoi apply` because they are tied to declarative package manifests and should re-run when those manifests change.
+これらの script は manifest と機能フラグから render され、必要なものだけ install します。manifest が満たされている時は不要な `apt-get update` や install を行いません。
 
 ### `mise`
 
-`mise` is the user-space runtime manager.
+`mise` はユーザー空間の runtime manager です。
 
-- `mise` configuration is deployed by `chezmoi`
-- `mise install` is run manually by the user
-- `mise install` is not executed from `run_once_*`
-- `mise install` is not executed from `run_onchange_*`
-- shell-time auto-install should stay disabled
+- 設定ファイルは `chezmoi` が配置する
+- `mise install` は手動実行
+- `run_once_*` / `run_onchange_*` からは呼ばない
+- shell 実行時の auto-install は無効化する
 
-Reasoning:
+理由:
 
-- `mise` tool installation is network-heavy and failure-prone
-- `run_once_*` does not react well to future tool list changes
-- shell activation and PATH issues are easier to debug when `mise install` is explicit
+- network 依存で失敗点が増える
+- `run_once_*` は将来の tool 追加に弱い
+- shell/PATH 問題を切り分けやすくするため
 
 ### `cargo`
 
-`cargo install` is not part of the default `chezmoi apply` flow.
+`cargo install` は標準の apply flow に含めません。
 
-- use it only for tools that do not fit OS package managers or `mise`
-- run it manually or behind an explicit opt-in script
+- `mise` や OS package manager で扱いにくいものだけ対象にする
+- 必要なら手動、または明示 opt-in にする
 
-## Script Policy
+## Script 方針
 
 ### `run_onchange_*`
 
-Use `run_onchange_*` for repeatable, manifest-driven operations.
+用途:
 
-Examples:
+- manifest 駆動の再実行可能な同期
 
-- Ubuntu core `apt` packages
-- Ubuntu optional `flatpak` packages
-- macOS `brew` packages
-- macOS `cask` apps
+例:
 
-Rule:
+- Ubuntu の core `apt`
+- Ubuntu の任意 `flatpak`
+- macOS の `brew`
+- macOS の `cask`
 
-- if the rendered script changes, it may re-run
-- the script body should be generated from package manifest files and local feature flags
-- package sync scripts should install only missing packages and skip network refresh when their manifests are already satisfied
+ルール:
+
+- render 結果が変われば再実行される
+- script 本文は package manifest と機能フラグから生成する
+- manifest がすでに満たされていれば network refresh や install をスキップする
 
 ### `run_once_*`
 
-Use `run_once_*` only for small one-time operations.
+用途:
 
-Examples:
+- 本当に一回でよい軽処理
 
-- changing the login shell with `chsh`
-- one-time local initialization that is not package-manifest driven
+例:
 
-Do not use `run_once_*` for:
+- `chsh`
 
-- package synchronization
+ここに入れてはいけないもの:
+
+- package 同期
 - `mise install`
 - `cargo install`
-- large downloads from moving targets
+- moving target を取る大きな download
 
 ### `run_*`
 
-Use plain `run_*` scripts for cheap, idempotent follow-up actions that depend on current session state rather than package manifests.
+用途:
 
-Examples:
+- セッション状態に依存する軽い後処理
 
-- enabling a GNOME Shell extension after the files already exist
-- retrying lightweight desktop integration steps that may be skipped when no GUI session is active
+例:
 
-Note:
+- GNOME extension の有効化
+- GUI セッション不在で失敗した軽処理の再試行
 
-- plain `run_*` scripts normally appear as `R` in `chezmoi status`; this means they will run on the next `chezmoi apply`, not that the repository is dirty
+補足:
 
-## Feature Flags
+- plain `run_*` は `chezmoi status` で `R` と表示されるのが通常挙動です
+- これは「次回 `chezmoi apply` で実行される」の意味で、repo の汚れではありません
 
-Optional toolsets are controlled by local machine data instead of repository branches or host-name heuristics.
+## 機能フラグ
 
-Local file:
+任意機能は branch や hostname ではなく、各マシンのローカル設定で制御します。
+
+local file:
 
 `~/.config/chezmoi/chezmoi.toml`
 
@@ -163,7 +212,7 @@ ros2 = false
 kicad = false
 ```
 
-For a robotics Ubuntu machine:
+ロボット用途の Ubuntu マシン例:
 
 ```toml
 [data.features]
@@ -171,40 +220,58 @@ ros2 = true
 kicad = true
 ```
 
-### Feature Semantics
+意味:
 
-- `ros2`: Ubuntu only
-- `kicad`: optional
+- `ros2`: Ubuntu 専用
+- `kicad`: 任意
 
-If a feature is disabled later, the repository does not automatically uninstall what was previously installed. Disabling a feature only stops future installation from the manifests.
+feature を false にしても、自動 uninstall はしません。止まるのは「今後その manifest から install しない」ことだけです。
 
-For `ros2`, the feature flag exists at the repository level, but installation follows the official ROS 2 Ubuntu instructions instead of the normal package manifests.
+`ros2` だけは repo 側に機能フラグを持ちつつ、install 自体は公式 ROS 2 手順に従います。
 
-## Repository Boundaries
+## リポジトリ境界
 
-The repository must clearly separate deployable `chezmoi` source files from repository-only materials.
-
-### Deployable by `chezmoi`
+配置対象:
 
 - `dot_*`
 - `private_*`
 - `run_onchange_*`
 - `run_once_*`
+- `run_*`
 - `.chezmoiexternal.toml`
-- other files that are intentionally mapped to `$HOME`
 
-### Repository-Only
+repo 専用:
 
 - `docs/`
 - `packages/`
 - `assets/`
 - `.vscode/`
 - `AGENTS.md`
-- temporary local tooling state such as `.serena/`
+- `.serena/` のような一時的 local state
 
-Repository-only paths must be excluded from deployment via `.chezmoiignore.tmpl`.
+これらの repo 専用 path は `.chezmoiignore.tmpl` で除外します。
 
-## Target Repository Structure
+## 目標ディレクトリ構造
+
+```mermaid
+flowchart LR
+    Root["repo ルート"]
+    Deploy["配置対象"]
+    RepoOnly["repo 専用"]
+
+    Root --> Deploy
+    Root --> RepoOnly
+
+    Deploy --> D1["dot_* / private_*"]
+    Deploy --> D2["run_onchange_* / run_once_* / run_*"]
+    Deploy --> D3[".chezmoiexternal.toml"]
+
+    RepoOnly --> R1["docs/"]
+    RepoOnly --> R2["packages/"]
+    RepoOnly --> R3["assets/"]
+    RepoOnly --> R4[".vscode/"]
+    RepoOnly --> R5["AGENTS.md"]
+```
 
 ```text
 .
@@ -224,84 +291,54 @@ Repository-only paths must be excluded from deployment via `.chezmoiignore.tmpl`
 ├── run_once_10_shell.sh.tmpl
 ├── packages/
 │   ├── ubuntu/
-│   │   ├── apt/
-│   │   │   ├── core.txt
-│   │   │   ├── gui.txt
-│   │   │   └── input.txt
-│   │   ├── apt_thirdparty/
-│   │   │   └── core.txt
-│   │   └── flatpak/
-│   │       ├── core.txt
-│   │       └── kicad.txt
 │   ├── macos/
-│   │   ├── brew/
-│   │   │   └── core.txt
-│   │   └── cask/
-│   │       ├── core.txt
-│   │       └── kicad.txt
 │   └── common/
-│       └── cargo.txt
 ├── assets/
 │   └── windows/
-│       └── solidworks/
-│           └── swSettings.sldreg
 └── docs/
-    └── architecture.md
 ```
 
-## Package Layout Rules
+## Package 配置ルール
 
-- `core.txt` contains packages installed on every machine for that OS/package manager
-- feature files contain only optional packages
-- package files are plain text, one item per line, comments allowed
+- `core.txt`: その OS / package manager で常に入れるもの
+- feature file: 任意機能だけ
+- package file は plain text、1 行 1 package、コメント可
 
-## Planned Package Behavior
+## Package 振る舞い
 
 ### Ubuntu
 
-- `apt/core.txt`: CLI/system/core packages
-- `apt/gui.txt`: Ubuntu GUI support packages such as `flatpak`
-- `apt/input.txt`: Ubuntu input stack packages such as `fcitx5`
-- `apt_thirdparty/core.txt`: third-party packages such as `tailscale` or `code`
-- `flatpak/core.txt`: optional core GUI applications chosen for Ubuntu
-- `flatpak/kicad.txt`: KiCad, enabled only when `features.kicad = true`
-- `run_onchange_30_ubuntu_input.sh.tmpl`: installs Toshy and Ubuntu input packages
-- `run_onchange_30_ubuntu_input.sh.tmpl`: tracks a desired Toshy ref and records the applied ref in local state
-- `run_40_ubuntu_gnome_input.sh.tmpl`: retries xremap GNOME extension enablement when a GNOME session is active
-- ROS 2 installation is manual and follows the official ROS 2 Jazzy Ubuntu instructions
+- `apt/core.txt`: CLI / system 基本パッケージ
+- `apt/gui.txt`: `flatpak` など GUI 基盤
+- `apt/input.txt`: `fcitx5` など入力系
+- `apt_thirdparty/core.txt`: `tailscale`, `code` など
+- `flatpak/core.txt`: 任意の GUI app
+- `flatpak/kicad.txt`: `features.kicad = true` の時だけ有効
+- `run_onchange_30_ubuntu_input.sh.tmpl`: Toshy と入力系 package を処理
+- `run_40_ubuntu_gnome_input.sh.tmpl`: GNOME session 中に xremap extension を有効化
+- ROS 2 は手動で公式手順に従う
 
 ### macOS
 
-- `brew/core.txt`: CLI/system packages
-- `cask/core.txt`: GUI applications
-- `cask/kicad.txt`: KiCad, enabled only when `features.kicad = true`
+- `brew/core.txt`: CLI / system パッケージ
+- `cask/core.txt`: GUI アプリ
+- `cask/kicad.txt`: `features.kicad = true` の時だけ有効
 
-## Windows Assets
+## Windows 資産
 
-Windows assets belong under `assets/windows/`.
+Windows 用資産は `assets/windows/` に置きます。
 
-Example:
+例:
 
 - `assets/windows/solidworks/swSettings.sldreg`
 
-These files are versioned in Git but are not deployed by `chezmoi` until Windows support is intentionally designed.
+これらは Git 管理してよいですが、Windows 対応を正式に設計するまでは配置しません。
 
-## Maintenance Rules for Humans and LLM Agents
+## 保守ルール
 
-- This document is the primary architecture reference
-- `README.md` stays short and points here
-- do not add repository-only files unless their deployment behavior is explicit
-- before adding any new root-level file, decide whether it is deployable or repo-only
-- if a file is repo-only, make sure `.chezmoiignore.tmpl` excludes it
-- prefer explicit feature flags over implicit host detection
-- keep script responsibilities narrow and obvious from filenames
-
-## Migration Order
-
-1. Add `.chezmoiignore.tmpl` and exclude repository-only paths
-2. Move Windows-only assets into `assets/windows/`
-3. Rebuild `packages/` into the target OS/feature layout
-4. Replace current `run_once_*` package installers with `run_onchange_*`
-5. Remove automatic `mise install` and `cargo install` from the apply flow
-6. Rewrite scripts to match the new package manifests and feature flags
-7. Validate that `README.md` and this document still describe the repository accurately
+- この文書を設計の一次情報にする
+- `README.md` は短く保ち、この文書へ誘導する
+- root に新しい file を置く前に、配置対象か repo 専用かを決める
+- repo 専用なら `.chezmoiignore.tmpl` に反映する
+- 暗黙分岐より機能フラグを優先する
+- script の責務は filename から読める粒度にする
