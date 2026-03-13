@@ -10,6 +10,22 @@ plugins=(
   zsh-syntax-highlighting
 )
 
+# 補完で小文字でも大文字にマッチさせる
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+
+# 補完候補を詰めて表示
+setopt list_packed
+
+# 補完候補一覧をカラー表示
+autoload colors
+zstyle ':completion:*' list-colors ''
+
+# コマンドのスペルを訂正
+setopt correct
+
+autoload -U compinit; compinit # zshの新しい補完システムを有効にする
+autoload -U colors; colors # 色指定できるようにする
+
 HISTSIZE=10000
 SAVEHIST=10000
 

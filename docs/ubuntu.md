@@ -28,9 +28,9 @@ flowchart TB
 
 管理対象:
 
-- [run_onchange_10_ubuntu_apt.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_10_ubuntu_apt.sh.tmpl)
-- [packages/ubuntu/apt/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/core.txt)
-- [packages/ubuntu/apt_thirdparty/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt_thirdparty/core.txt)
+- [run_onchange_10_ubuntu_apt.sh.tmpl](../run_onchange_10_ubuntu_apt.sh.tmpl)
+- [packages/ubuntu/apt/core.txt](../packages/ubuntu/apt/core.txt)
+- [packages/ubuntu/apt_thirdparty/core.txt](../packages/ubuntu/apt_thirdparty/core.txt)
 
 役割:
 
@@ -46,10 +46,10 @@ flowchart TB
 
 管理対象:
 
-- [run_onchange_20_ubuntu_gui.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_20_ubuntu_gui.sh.tmpl)
-- [packages/ubuntu/apt/gui.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/gui.txt)
-- [packages/ubuntu/flatpak/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/core.txt)
-- [packages/ubuntu/flatpak/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/kicad.txt)
+- [run_onchange_20_ubuntu_gui.sh.tmpl](../run_onchange_20_ubuntu_gui.sh.tmpl)
+- [packages/ubuntu/apt/gui.txt](../packages/ubuntu/apt/gui.txt)
+- [packages/ubuntu/flatpak/core.txt](../packages/ubuntu/flatpak/core.txt)
+- [packages/ubuntu/flatpak/kicad.txt](../packages/ubuntu/flatpak/kicad.txt)
 
 役割:
 
@@ -64,9 +64,9 @@ flowchart TB
 
 管理対象:
 
-- [run_onchange_30_ubuntu_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_30_ubuntu_input.sh.tmpl)
-- [run_40_ubuntu_gnome_input.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_40_ubuntu_gnome_input.sh.tmpl)
-- [packages/ubuntu/apt/input.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt/input.txt)
+- [run_onchange_30_ubuntu_input.sh.tmpl](../run_onchange_30_ubuntu_input.sh.tmpl)
+- [run_40_ubuntu_gnome_input.sh.tmpl](../run_40_ubuntu_gnome_input.sh.tmpl)
+- [packages/ubuntu/apt/input.txt](../packages/ubuntu/apt/input.txt)
 
 役割:
 
@@ -85,12 +85,12 @@ flowchart TB
 
 ## 配置される設定ファイル
 
-- [dot_xinputrc](/home/tomixrm/.local/share/chezmoi/dot_xinputrc)
-- [private_profile](/home/tomixrm/.local/share/chezmoi/private_dot_config/private_fcitx5/private_profile)
-- [private_config](/home/tomixrm/.local/share/chezmoi/private_dot_config/private_fcitx5/private_config)
-- [org.fcitx.Fcitx5.desktop](/home/tomixrm/.local/share/chezmoi/private_dot_config/autostart/org.fcitx.Fcitx5.desktop)
-- [toshy_config.py](/home/tomixrm/.local/share/chezmoi/private_dot_config/toshy/toshy_config.py)
-- [extension.js](/home/tomixrm/.local/share/chezmoi/private_dot_local/private_share/gnome-shell/extensions/xremap@k0kubun.com/extension.js)
+- [dot_xinputrc](../dot_xinputrc)
+- [private_profile](../private_dot_config/private_fcitx5/private_profile)
+- [private_config](../private_dot_config/private_fcitx5/private_config)
+- [org.fcitx.Fcitx5.desktop](../private_dot_config/autostart/org.fcitx.Fcitx5.desktop)
+- [toshy_config.py](../private_dot_config/toshy/toshy_config.py)
+- [extension.js](../private_dot_local/private_share/gnome-shell/extensions/xremap@k0kubun.com/extension.js)
 
 ## Feature Flags
 
@@ -107,7 +107,7 @@ kicad = false
 ### `kicad`
 
 - Ubuntu 任意
-- `true` の時、[packages/ubuntu/flatpak/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/flatpak/kicad.txt) から KiCad を入れる
+- `true` の時、[packages/ubuntu/flatpak/kicad.txt](../packages/ubuntu/flatpak/kicad.txt) から KiCad を入れる
 
 ### `ros2`
 
@@ -135,7 +135,7 @@ kicad = false
 
 管理対象:
 
-- [packages/ubuntu/apt_thirdparty/core.txt](/home/tomixrm/.local/share/chezmoi/packages/ubuntu/apt_thirdparty/core.txt)
+- [packages/ubuntu/apt_thirdparty/core.txt](../packages/ubuntu/apt_thirdparty/core.txt)
 
 現在の対象:
 
