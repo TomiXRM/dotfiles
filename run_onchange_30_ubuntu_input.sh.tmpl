@@ -1,0 +1,112 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_30_ubuntu_input] Started at $(date) ==="
+
+TOSHY_REPO_URL="https://github.com/RedBearAK/toshy.git"
+TOSHY_REF="main"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
+TOSHY_STATE_FILE="$STATE_DIR/toshy-ref"
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu input sync."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu input sync."
+  exit 0
+fi
+
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "apt-get not found; skipping Ubuntu input sync."
+  exit 0
+fi
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "git not found; install Ubuntu core packages first."
+  exit 0
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 not found; install Ubuntu core packages first."
+  exit 0
+fi
+
+input_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/apt/input.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+missing_input_packages=()
+for pkg in "${input_packages[@]}"; do
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    missing_input_packages+=("$pkg")
+  fi
+done
+
+if [ "${#missing_input_packages[@]}" -gt 0 ]; then
+  sudo apt-get update
+  echo "Installing missing Ubuntu input apt packages (${#missing_input_packages[@]}): ${missing_input_packages[*]}"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_input_packages[@]}"
+else
+  echo "Ubuntu input apt packages already installed; skipping apt-get update."
+fi
+
+mkdir -p "$STATE_DIR"
+
+needs_toshy_install=false
+current_toshy_ref=""
+if [ -d "$HOME/.config/toshy/.git" ]; then
+  current_toshy_ref="$(git -C "$HOME/.config/toshy" rev-parse HEAD 2>/dev/null || true)"
+fi
+
+if ! command -v toshy-services-start >/dev/null 2>&1; then
+  needs_toshy_install=true
+elif [ -n "$current_toshy_ref" ] && [ "$current_toshy_ref" = "$TOSHY_REF" ]; then
+  if [ ! -r "$TOSHY_STATE_FILE" ] || [ "$(cat "$TOSHY_STATE_FILE")" != "$TOSHY_REF" ]; then
+    echo "Existing Toshy install already matches desired ref ($TOSHY_REF); recording state."
+    printf '%s\n' "$TOSHY_REF" > "$TOSHY_STATE_FILE"
+  fi
+elif [[ ! "$TOSHY_REF" =~ ^[0-9a-f]{40}$ ]]; then
+  if [ ! -r "$TOSHY_STATE_FILE" ] || [ "$(cat "$TOSHY_STATE_FILE")" != "$TOSHY_REF" ]; then
+    echo "Existing Toshy install detected; recording desired ref ($TOSHY_REF) without reinstall."
+    printf '%s\n' "$TOSHY_REF" > "$TOSHY_STATE_FILE"
+  fi
+elif [ -r "$TOSHY_STATE_FILE" ]; then
+  installed_ref="$(cat "$TOSHY_STATE_FILE")"
+  if [ "$installed_ref" != "$TOSHY_REF" ]; then
+    needs_toshy_install=true
+  fi
+else
+  echo "Existing Toshy install detected, but installed ref is unknown; reinstalling to reach desired ref ($TOSHY_REF)."
+  needs_toshy_install=true
+fi
+
+if [ "$needs_toshy_install" != "true" ]; then
+  echo "Toshy already satisfies desired ref ($TOSHY_REF); skipping installer."
+  echo "toshy_config.py is managed by chezmoi."
+  exit 0
+fi
+
+TOSHY_DIR="$(mktemp -d -t toshy-XXXXXXXX)"
+cleanup() {
+  rm -rf "$TOSHY_DIR"
+}
+trap cleanup EXIT
+
+echo "Cloning Toshy (${TOSHY_REF})..."
+git clone --depth 1 --branch "$TOSHY_REF" "$TOSHY_REPO_URL" "$TOSHY_DIR"
+
+echo "Installing Toshy..."
+python3 "$TOSHY_DIR/setup_toshy.py" install
+printf '%s\n' "$TOSHY_REF" > "$TOSHY_STATE_FILE"
+
+echo "toshy_config.py is managed by chezmoi."
+{{- end -}}

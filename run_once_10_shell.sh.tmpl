@@ -1,32 +1,17 @@
-{{- if eq .chezmoi.os "linux" -}}
+{{- if or (eq .chezmoi.os "linux") (eq .chezmoi.os "darwin") -}}
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== [run_once_11_zsh] Started at $(date) ==="
-
-if [ ! -r /etc/os-release ]; then
-  echo "os-release not found; skipping zsh setup."
-  exit 0
-fi
-
-. /etc/os-release
-if [ "${ID:-}" != "ubuntu" ]; then
-  echo "Not Ubuntu (ID=${ID:-unknown}); skipping zsh setup."
-  exit 0
-fi
+echo "=== [run_once_10_shell] Started at $(date) ==="
 
 if ! command -v zsh >/dev/null 2>&1; then
-  echo "zsh not found; install it via run_once_10_os_base and re-run."
+  echo "zsh not found; skipping shell setup."
   exit 0
 fi
 
 ZSH_PATH="$(command -v zsh)"
-if [ -z "$ZSH_PATH" ]; then
-  echo "zsh path not found; skipping chsh."
-  exit 0
-fi
-
 CURRENT_SHELL="${SHELL:-}"
+
 if [ "$CURRENT_SHELL" = "$ZSH_PATH" ]; then
   echo "zsh already set as default shell."
   exit 0

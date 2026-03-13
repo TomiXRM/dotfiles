@@ -1,41 +1,67 @@
-# Repository Guidelines
+# リポジトリ運用メモ
 
-## Project Structure & Module Organization
-- `README.MD` describes the direction and links to detailed docs.
-- `docs/` holds project rules and targets:
-  - `docs/rule.md` defines the setup philosophy and execution order.
-  - `docs/want_to_organize.md` lists desired tools and OS-specific needs.
-- `今まで使ってたdotfilesリポジトリ/` is a legacy dotfiles repo with prior scripts and input configs (e.g., `install.sh`, `keyboards/`).
+## 構成
 
-## Build, Test, and Development Commands
-- No build or test commands are defined at the repo root yet.
-- Expected bootstrap flow (from `docs/rule.md`):
-  - `chezmoi init --apply` (after installing `chezmoi`).
-- When adding scripts or tooling, document the exact commands in `README.MD` and keep them OS-scoped (e.g., `apt` vs `brew`).
+- `README.md` は人間向けの短い入口
+- `docs/architecture.md` は v2 設計の一次情報
+- `docs/ubuntu.md` は Ubuntu 固有メモ
+- `docs/macos.md` は macOS 検証メモ
+- 配置対象は root の `dot_*`, `private_*`, `run_onchange_*`, `run_once_*`, `run_*`
+- repo 専用の資料や資産は `docs/`, `packages/`, `assets/`, `.vscode/` に置く
+- Windows 用ファイルは `assets/windows/` に置くが、Windows 自体はまだ正式対応しない
 
-## Coding Style & Naming Conventions
-- Prefer clear, explicit scripts over abstraction; keep OS-specific logic separated.
-- Follow the documented ordering for chezmoi scripts: `run_once_XX_*.sh.tmpl` where `XX` is the execution order.
-- Keep scripts idempotent and safe to re-run.
-- If you add new configuration files, place them following chezmoi conventions at repo root and note their purpose in `docs/`.
+## 対応 OS
 
-## Testing Guidelines
-- There is no automated test suite yet.
-- Manual verification should follow the sequence in `docs/rule.md` and confirm:
-  - `chezmoi apply` is repeatable.
-  - OS packages install cleanly.
-  - Shell restart happens before `mise install`.
-- If you introduce tests (e.g., shell checks), add a short “How to run” note here.
+- `Ubuntu`: 主対象
+- `macOS`: 対応対象
+- `Windows`: 未対応
 
-## Commit & Pull Request Guidelines
-- The root repo has no Git history yet. The legacy repo history uses short, imperative messages like “add …”, “fix …”, “update …”.
-- Use concise, imperative commit messages and keep changes scoped.
-- PRs should include:
-  - Target OS (Mac/Ubuntu) and any arch constraints.
-  - Exact install/verify steps.
-  - Notes on any manual UI steps (screenshots if GUI settings change).
+## 入口コマンド
 
-## Configuration Principles (Read Before Editing)
-- Follow the order: bootstrap → chezmoi → OS packages → shell restart → mise → cargo.
-- Keep GUI installs in OS package managers; avoid `snap`.
-- Isolate exceptions and platform-specific logic; avoid single “all-in-one” install scripts.
+- 新規マシン:
+  - `sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>`
+- `chezmoi` 導入済み:
+  - `chezmoi init --apply <github-user-or-repo-url>`
+- ユーザー空間 runtime 導入:
+  - `mise install`
+
+## Script ルール
+
+- `run_onchange_*` は manifest 駆動の再実行可能な処理に使う
+- `run_once_*` は `chsh` のような軽い一回処理だけに使う
+- `run_*` は GUI セッション依存の軽処理に使う
+- `mise install` は script に入れない
+- `cargo install` は標準 apply flow に入れない
+- script は OS ごとに分離し、責務を狭く保つ
+
+## 機能フラグ
+
+- 任意機能は `~/.config/chezmoi/chezmoi.toml` で制御する
+- 現在の機能:
+  - `features.ros2`: Ubuntu 専用
+  - `features.kicad`: 任意
+- `features.ros2` は ROS 2 の自動 install ではなく、ROS-aware な設定分岐のために使う
+
+## リポジトリ境界
+
+- root に file を追加する前に、配置対象か repo 専用かを決める
+- repo 専用なら `.chezmoiignore.tmpl` に入れる
+- docs, package manifest, editor cache, local state を `$HOME` に漏らさない
+
+## 最低限の確認
+
+- shell script: `bash -n`
+- template script: `chezmoi execute-template < file.tmpl | bash -n`
+- JSON: `jq empty`
+- Python config: `python3 -m py_compile`
+- 設計変更時は `README.md` と `docs/architecture.md` を合わせる
+
+## コミット
+
+- commit message は短く命令形
+- 変更は可能な限り 1 関心に絞る
+- 大きい変更では次を明記する
+  - 対象 OS
+  - 機能フラグ
+  - 検証手順
+  - `chezmoi apply` 後の手動作業

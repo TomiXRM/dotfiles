@@ -1,0 +1,8 @@
+ffmpeg
+jq
+ripgrep
+fd
+fzf
+zoxide
+htop
+imagemagick
