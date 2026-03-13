@@ -76,7 +76,8 @@ kicad = false
 
 ## 現在の状態
 
-2026年3月13日時点:
+2026年3月14日時点:
 
 - Ubuntu 側の v2 フローは再構成と実機検証が完了
-- macOS 側は repo 内の構造はあるが、実機検証は未完了
+- macOS 側は主要な `brew` / `cask` / shell 初期化フローの実機検証を進めている
+- macOS の `cask` は Homebrew 管理外の既存 app / binary artifact を検知した場合、安全のため skip する

@@ -6,3 +6,8 @@ fzf
 zoxide
 htop
 imagemagick
+
+gh
+starship
+mise
+zellij

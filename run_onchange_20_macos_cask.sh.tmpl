@@ -12,6 +12,14 @@ if ! command -v brew >/dev/null 2>&1; then
   exit 0
 fi
 
+if ! command -v ruby >/dev/null 2>&1; then
+  echo "ruby not found; cannot inspect macOS cask metadata safely."
+  echo "See {{ .chezmoi.sourceDir }}/docs/macos.md"
+  exit 0
+fi
+
+HOMEBREW_PREFIX="$(brew --prefix)"
+
 cask_packages=(
 {{- range (splitList "\n" (include "packages/macos/cask/core.txt")) }}
 {{- $line := trim . }}
@@ -34,7 +42,97 @@ if [ "${#cask_packages[@]}" -eq 0 ]; then
   exit 0
 fi
 
+pending_cask_packages=()
+skipped_existing_artifacts=()
+for pkg in "${cask_packages[@]}"; do
+  if brew list --cask "$pkg" >/dev/null 2>&1; then
+    echo "macOS cask already installed via Homebrew: $pkg"
+    continue
+  fi
+
+  artifact_paths=()
+  while IFS= read -r artifact_path; do
+    if [ -n "$artifact_path" ]; then
+      artifact_paths+=("$artifact_path")
+    fi
+  done < <(
+    brew info --json=v2 --cask "$pkg" 2>/dev/null | HOMEBREW_PREFIX="$HOMEBREW_PREFIX" ruby -rjson -e '
+      data = JSON.parse(STDIN.read)
+      cask = data.fetch("casks", []).first || {}
+      homebrew_prefix = ENV.fetch("HOMEBREW_PREFIX")
+
+      cask.fetch("artifacts", []).each do |artifact|
+        if artifact.key?("app")
+          artifact.fetch("app", []).each do |entry|
+            next unless entry.is_a?(String)
+            puts File.join("/Applications", entry)
+          end
+        end
+
+        next unless artifact.key?("binary")
+
+        binary = artifact.fetch("binary")
+        next unless binary.is_a?(Array)
+
+        binary.each do |entry|
+          case entry
+          when Hash
+            target = entry["target"]
+            next unless target.is_a?(String) && !target.empty?
+            puts File.join(homebrew_prefix, "bin", target)
+          when String
+            # No-op: source path inside the app bundle does not matter for collision checks.
+          end
+        end
+      end
+    '
+  )
+
+  existing_unmanaged_artifact=false
+  if [ "${#artifact_paths[@]}" -gt 0 ]; then
+    for artifact_path in "${artifact_paths[@]}"; do
+      if [ -e "$artifact_path" ] || [ -L "$artifact_path" ]; then
+        echo "Skipping $pkg because an unmanaged artifact already exists at $artifact_path"
+        skipped_existing_artifacts+=("$pkg")
+        existing_unmanaged_artifact=true
+        break
+      fi
+    done
+  fi
+
+  if [ "$existing_unmanaged_artifact" = "true" ]; then
+    continue
+  fi
+
+  pending_cask_packages+=("$pkg")
+done
+
+if [ "${#pending_cask_packages[@]}" -eq 0 ]; then
+  echo "macOS cask packages already satisfy manifests; skipping brew update."
+  if [ "${#skipped_existing_artifacts[@]}" -gt 0 ]; then
+    echo "Skipped unmanaged existing artifacts: ${skipped_existing_artifacts[*]}"
+  fi
+  exit 0
+fi
+
 brew update
-echo "Installing macOS cask packages (${#cask_packages[@]}): ${cask_packages[*]}"
-brew install --cask "${cask_packages[@]}"
+echo "Installing pending macOS cask packages (${#pending_cask_packages[@]}): ${pending_cask_packages[*]}"
+
+failed_cask_packages=()
+for pkg in "${pending_cask_packages[@]}"; do
+  echo "Installing macOS cask: $pkg"
+  if ! brew install --cask "$pkg"; then
+    failed_cask_packages+=("$pkg")
+  fi
+done
+
+if [ "${#failed_cask_packages[@]}" -gt 0 ]; then
+  echo "macOS cask install failed: ${failed_cask_packages[*]}"
+  exit 1
+fi
+
+if [ "${#skipped_existing_artifacts[@]}" -gt 0 ]; then
+  echo "Skipped unmanaged existing artifacts: ${skipped_existing_artifacts[*]}"
+  echo "Remove the existing app or binary and re-run chezmoi apply if you want Homebrew to manage it."
+fi
 {{- end -}}
