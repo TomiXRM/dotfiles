@@ -4,11 +4,11 @@
 
 この文書は、現在の v2 設計の正本です。
 
-2026年3月13日時点の状態:
+2026年3月14日時点の状態:
 
 - Ubuntu はこの設計に沿って再構成済み
 - Ubuntu では `chezmoi apply` による実機検証まで完了
-- macOS は同じ設計で組んでいるが、実機検証はこれから
+- macOS は同じ設計で組んでおり、主要な `brew` / `cask` / shell 初期化フローの実機検証を進めている
 
 ## 目的
 
@@ -164,6 +164,7 @@ OS レベルの package は OS ごとの `run_onchange_*` script で扱います
 - render 結果が変われば再実行される
 - script 本文は package manifest と機能フラグから生成する
 - manifest がすでに満たされていれば network refresh や install をスキップする
+- macOS `cask` は Homebrew 管理外の既存 artifact と衝突しそうな場合、install を強行せず警告付きで skip する
 
 ### `run_once_*`
 
