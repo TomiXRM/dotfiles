@@ -9,6 +9,7 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 - [run_onchange_20_macos_cask.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_onchange_20_macos_cask.sh.tmpl) が [packages/macos/cask/core.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/core.txt) を処理する
 - `features.kicad = true` の時だけ [packages/macos/cask/kicad.txt](/home/tomixrm/.local/share/chezmoi/packages/macos/cask/kicad.txt) を追加する
 - `features.ros2` は macOS では無視する
+- Ghostty は macOS の cask として管理し、設定ファイルは [config.tmpl](/home/tomixrm/.local/share/chezmoi/private_dot_config/ghostty/config.tmpl) から `~/.config/ghostty/config` に配置する
 
 ## 実機検証でわかったこと
 
@@ -27,6 +28,7 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 - [run_once_10_shell.sh.tmpl](/home/tomixrm/.local/share/chezmoi/run_once_10_shell.sh.tmpl) が、すでに `zsh` を使っている macOS で自然に振る舞うか
 - [dot_zprofile](/home/tomixrm/.local/share/chezmoi/dot_zprofile) と [dot_zshrc.tmpl](/home/tomixrm/.local/share/chezmoi/dot_zshrc.tmpl) が標準の macOS shell setup を壊さないか
 - VS Code CLI 周りを手動運用のままにするかどうか
+- Ghostty の実運用設定をどこまで repo 管理に含めるか
 
 ## 現時点の扱い
 
