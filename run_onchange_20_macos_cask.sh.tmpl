@@ -27,6 +27,12 @@ cask_packages=(
   {{ quote $line }}
 {{- end }}
 {{- end }}
+{{- range (splitList "\n" (include "packages/macos/cask/fonts.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
 {{- if eq (printf "%v" (get (get . "features" | default dict) "kicad" | default false)) "true" }}
 {{- range (splitList "\n" (include "packages/macos/cask/kicad.txt")) }}
 {{- $line := trim . }}
@@ -66,6 +72,13 @@ for pkg in "${cask_packages[@]}"; do
           artifact.fetch("app", []).each do |entry|
             next unless entry.is_a?(String)
             puts File.join("/Applications", entry)
+          end
+        end
+
+        if artifact.key?("font")
+          artifact.fetch("font", []).each do |entry|
+            next unless entry.is_a?(String)
+            puts File.join(Dir.home, "Library", "Fonts", entry)
           end
         end
 
@@ -133,6 +146,6 @@ fi
 
 if [ "${#skipped_existing_artifacts[@]}" -gt 0 ]; then
   echo "Skipped unmanaged existing artifacts: ${skipped_existing_artifacts[*]}"
-  echo "Remove the existing app or binary and re-run chezmoi apply if you want Homebrew to manage it."
+  echo "Remove the existing app, font, or binary and re-run chezmoi apply if you want Homebrew to manage it."
 fi
 {{- end -}}
