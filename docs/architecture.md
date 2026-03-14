@@ -89,6 +89,7 @@ sequenceDiagram
     C->>F: dotfiles と template を配置
     C->>P: run_onchange_* を実行
     P-->>C: package manifests に従って同期
+    P->>M: mise 本体を bootstrap
     C->>C: run_once_* を実行
     C->>G: run_* を実行
     G-->>C: セッション依存の軽処理を再試行
@@ -127,14 +128,14 @@ OS レベルの package は OS ごとの `run_onchange_*` script で扱います
 `mise` はユーザー空間の runtime manager です。
 
 - 設定ファイルは `chezmoi` が配置する
+- `run_onchange_*` で `mise` 本体を bootstrap する
 - `mise install` は手動実行
-- `run_once_*` / `run_onchange_*` からは呼ばない
 - shell 実行時の auto-install は無効化する
 
 理由:
 
-- network 依存で失敗点が増える
-- `run_once_*` は将来の tool 追加に弱い
+- runtime install まで自動化すると失敗点が増える
+- `mise install` は moving target を含みやすい
 - shell/PATH 問題を切り分けやすくするため
 
 ### `cargo`
@@ -151,10 +152,12 @@ OS レベルの package は OS ごとの `run_onchange_*` script で扱います
 用途:
 
 - manifest 駆動の再実行可能な同期
+- user-space bootstrap の共有処理
 
 例:
 
 - Ubuntu の core `apt`
+- `mise` 本体の bootstrap
 - Ubuntu の任意 `flatpak`
 - macOS の `brew`
 - macOS の `cask`
@@ -162,7 +165,7 @@ OS レベルの package は OS ごとの `run_onchange_*` script で扱います
 ルール:
 
 - render 結果が変われば再実行される
-- script 本文は package manifest と機能フラグから生成する
+- script 本文は package manifest と機能フラグ、または共有 bootstrap ロジックから生成する
 - manifest がすでに満たされていれば network refresh や install をスキップする
 - macOS `cask` は Homebrew 管理外の既存 artifact と衝突しそうな場合、install を強行せず警告付きで skip する
 

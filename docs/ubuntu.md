@@ -16,12 +16,13 @@
 ```mermaid
 flowchart TB
     A["10_ubuntu_apt<br/>core apt / third-party apt"]
-    B["20_ubuntu_gui<br/>GUI apt / flatpak"]
-    C["30_ubuntu_input<br/>input apt / Toshy"]
-    D["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
-    E["手動<br/>mise install / ROS 2"]
+    B["15_mise_install<br/>mise bootstrap"]
+    C["20_ubuntu_gui<br/>GUI apt / flatpak"]
+    D["30_ubuntu_input<br/>input apt / Toshy"]
+    E["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
+    F["手動<br/>mise install / ROS 2"]
 
-    A --> B --> C --> D --> E
+    A --> B --> C --> D --> E --> F
 ```
 
 ### 1. Core apt
@@ -42,7 +43,23 @@ flowchart TB
 - manifest が満たされていれば `apt-get update` をスキップする
 - third-party package は repo 追加済みであることを前提にする
 
-### 2. GUI apt と flatpak
+### 2. `mise` bootstrap
+
+管理対象:
+
+- [run_onchange_15_mise_install.sh.tmpl](../run_onchange_15_mise_install.sh.tmpl)
+
+役割:
+
+- `mise` 本体を `~/.local/bin/mise` に bootstrap する
+- 既存の `mise` があれば共有 installer で上書き更新する
+
+補足:
+
+- `mise install` は引き続き手動実行
+- `dot_zprofile` が `~/.local/bin` を `PATH` に入れる
+
+### 3. GUI apt と flatpak
 
 管理対象:
 
@@ -60,7 +77,7 @@ flowchart TB
 
 - apt と flatpak の両方が満たされていれば、update / install をスキップする
 
-### 3. Input stack
+### 4. Input stack
 
 管理対象:
 
@@ -161,7 +178,7 @@ sequenceDiagram
     participant G as GNOME
 
     U->>C: chezmoi apply
-    C-->>U: Ubuntu scripts 完了
+    C-->>U: Ubuntu scripts 完了 (mise 本体を含む)
     U->>M: mise install
     U->>R: 必要なら公式手順で ROS 2 導入
     U->>G: 必要ならログインし直し / apply 再実行
@@ -171,6 +188,7 @@ sequenceDiagram
 
 1. login shell が変わった場合はログアウトして入り直す
 2. `mise install` を実行する
+   `mise` コマンド自体は `chezmoi apply` で入るので、ここでは runtime だけを揃える
 3. `features.ros2 = true` の場合は公式 ROS 2 手順を実行する
 4. xremap extension が有効になっていなければ、GNOME セッションを再起動して `chezmoi apply` を再実行する
 

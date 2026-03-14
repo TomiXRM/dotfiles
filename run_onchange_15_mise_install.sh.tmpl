@@ -1,0 +1,58 @@
+{{- if or (eq .chezmoi.os "linux") (eq .chezmoi.os "darwin") -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_15_mise_install] Started at $(date) ==="
+
+MISE_INSTALL_PATH="${HOME}/.local/bin/mise"
+export MISE_INSTALL_PATH
+export MISE_QUIET=1
+
+fetch_url="https://mise.run"
+existing_mise=""
+
+fetch_installer() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$fetch_url"
+    return
+  fi
+
+  if command -v wget >/dev/null 2>&1; then
+    wget -qO- "$fetch_url"
+    return
+  fi
+
+  echo "Neither curl nor wget found." >&2
+  return 1
+}
+
+mkdir -p "$(dirname "$MISE_INSTALL_PATH")"
+
+if command -v mise >/dev/null 2>&1; then
+  existing_mise="$(command -v mise)"
+  echo "Existing mise detected: $existing_mise"
+  current_version="$(mise --version 2>/dev/null || true)"
+  if [ -n "$current_version" ]; then
+    echo "Current version: $current_version"
+  fi
+else
+  echo "mise not found; installing to $MISE_INSTALL_PATH"
+fi
+
+if ! fetch_installer | sh; then
+  if [ -n "$existing_mise" ]; then
+    echo "Failed to update mise from $fetch_url; keeping existing installation."
+    exit 0
+  fi
+
+  echo "Failed to bootstrap mise from $fetch_url"
+  exit 1
+fi
+
+if [ ! -x "$MISE_INSTALL_PATH" ]; then
+  echo "Expected mise binary not found at $MISE_INSTALL_PATH"
+  exit 1
+fi
+
+echo "mise is ready: $("$MISE_INSTALL_PATH" --version)"
+{{- end -}}
