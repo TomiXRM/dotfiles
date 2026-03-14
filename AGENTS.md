@@ -58,7 +58,8 @@
 
 ## コミット
 
-- commit message は短く命令形
+- commit message は日本語で短く命令形
+- Pull Request の title と body も日本語で書く
 - 変更は可能な限り 1 関心に絞る
 - 大きい変更では次を明記する
   - 対象 OS
