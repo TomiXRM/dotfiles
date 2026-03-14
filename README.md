@@ -28,7 +28,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>
 chezmoi init --apply <github-user-or-repo-url>
 ```
 
-`chezmoi apply` 後に、ユーザー空間の runtime は明示的に入れます。
+`chezmoi apply` で `mise` 本体を bootstrap し、その後にユーザー空間の runtime を明示的に入れます。
 
 ```bash
 mise install
@@ -52,6 +52,7 @@ sequenceDiagram
     C->>S: run_onchange_* / run_once_* / run_*
     S->>O: apt / flatpak / brew / cask
     O-->>S: 必要なものだけ同期
+    S->>M: mise 本体を bootstrap
     C-->>U: apply 完了
     U->>M: mise install
     U->>R: 必要なら公式手順で ROS 2 を導入

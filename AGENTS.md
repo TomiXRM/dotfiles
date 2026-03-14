@@ -27,10 +27,10 @@
 
 ## Script ルール
 
-- `run_onchange_*` は manifest 駆動の再実行可能な処理に使う
+- `run_onchange_*` は manifest 駆動の再実行可能な処理と共有 bootstrap に使う
 - `run_once_*` は `chsh` のような軽い一回処理だけに使う
 - `run_*` は GUI セッション依存の軽処理に使う
-- `mise install` は script に入れない
+- `mise` 本体の bootstrap は script に入れてよいが、`mise install` は script に入れない
 - `cargo install` は標準 apply flow に入れない
 - script は OS ごとに分離し、責務を狭く保つ
 
@@ -58,7 +58,8 @@
 
 ## コミット
 
-- commit message は短く命令形
+- commit message は日本語で短く命令形
+- Pull Request の title と body も日本語で書く
 - 変更は可能な限り 1 関心に絞る
 - 大きい変更では次を明記する
   - 対象 OS

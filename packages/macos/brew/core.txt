@@ -9,5 +9,4 @@ imagemagick
 
 gh
 starship
-mise
 zellij

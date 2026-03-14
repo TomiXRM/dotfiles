@@ -6,6 +6,7 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 
 - `brew` は事前導入済みを前提にする
 - [run_onchange_10_macos_brew.sh.tmpl](../run_onchange_10_macos_brew.sh.tmpl) が [packages/macos/brew/core.txt](../packages/macos/brew/core.txt) を処理する
+- [run_onchange_15_mise_install.sh.tmpl](../run_onchange_15_mise_install.sh.tmpl) が `mise` を `~/.local/bin/mise` に bootstrap する
 - [run_onchange_20_macos_cask.sh.tmpl](../run_onchange_20_macos_cask.sh.tmpl) が [packages/macos/cask/core.txt](../packages/macos/cask/core.txt) を処理する
 - [packages/macos/cask/fonts.txt](../packages/macos/cask/fonts.txt) で Ghostty 向けフォントを処理する
 - `features.kicad = true` の時だけ [packages/macos/cask/kicad.txt](../packages/macos/cask/kicad.txt) を追加する
@@ -34,11 +35,11 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 
 ## 検証したいこと
 
-- [packages/macos/brew/core.txt](../packages/macos/brew/core.txt) の formula 名が正しいか
+- [packages/macos/brew/core.txt](../packages/macos/brew/core.txt) の formula 名が `mise` を除いて正しいか
 - [packages/macos/cask/core.txt](../packages/macos/cask/core.txt) の cask 名が正しいか
 - [packages/macos/cask/fonts.txt](../packages/macos/cask/fonts.txt) の font cask 名が正しいか
 - [run_once_10_shell.sh.tmpl](../run_once_10_shell.sh.tmpl) が、すでに `zsh` を使っている macOS で自然に振る舞うか
-- [dot_zprofile](../dot_zprofile) と [dot_zshrc.tmpl](../dot_zshrc.tmpl) が標準の macOS shell setup を壊さないか
+- [dot_zprofile](../dot_zprofile) が標準の macOS shell setup を壊さないか
 - VS Code CLI 周りを手動運用のままにするかどうか
 - Ghostty の実運用設定をどこまで repo 管理に含めるか
 
