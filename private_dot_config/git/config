@@ -9,14 +9,17 @@
 [color]
 	ui = true
 [core]
-	editor = vim
+	editor = nano
 	autoCRLF = input
 	symlinks = true
+	excludesFile = ~/.config/git/ignore
 [commit]
 	template = ~/.config/git/commit_template
-[core]
-	editor = nano
-[credential]
-	helper = store
+[credential "https://github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/usr/bin/gh auth git-credential
 [help]
 	autocorrect = 50
