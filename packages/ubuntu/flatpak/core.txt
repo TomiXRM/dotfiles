@@ -1,1 +1,4 @@
 # Core Ubuntu flatpak apps.
+app.zen_browser.zen
+com.google.Chrome
+com.axosoft.GitKraken

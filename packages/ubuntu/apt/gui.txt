@@ -2,4 +2,3 @@ flatpak
 gnome-software-plugin-flatpak
 gnome-sushi
 gnome-shell-extension-manager
-gnome-browser-connector
