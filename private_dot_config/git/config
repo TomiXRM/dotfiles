@@ -1,0 +1,22 @@
+[user]
+	name = tomixrm
+	email = 20753105+TomiXRM@users.noreply.github.com
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[color]
+	ui = true
+[core]
+	editor = vim
+	autoCRLF = input
+	symlinks = true
+[commit]
+	template = ~/.config/git/commit_template
+[core]
+	editor = nano
+[credential]
+	helper = store
+[help]
+	autocorrect = 50
