@@ -1,0 +1,27 @@
+
+# ==== Emojis ====
+# ✨ :sparkles: Add new feature
+# ✅  :white_check_mark: Update existing feature (not bug)
+# ⚠️  :warning: Fix bug/error
+# 🔥  :fire: Remove files or features
+# ✏️ :pencil2: Fix typos
+# 📝  :memo: Update documentation
+# ♻️  :recycle: Dependencies update
+# 🐧  :penguin: Improved the Linux
+# 🍎  :apple: Improved the macOS
+# 🔖 :bookmark: Add new library
+# 🎉  :tada: Initial commit
+
+# ==== Format ====
+# :emoji: Subject
+#
+# Commit body...
+
+# ==== Messages ====
+# 新規(ファイル)機能追加: Add
+# 機能修正、既存機能追加（バグではない): Update
+# リファクタリング: Clean
+# ファイル名変更:
+# 削除など: Remove
+# バグ修正: Fix
+# バージョンアップ: Upgrade
