@@ -76,5 +76,21 @@ fi
 # ROS2 (MacOS only)
 if type pixi >/dev/null 2>&1; then
   eval "$(pixi completion --shell zsh)"
+
+  # pixi環境に入ったら1回だけ補完を仕込む
+  autoload -Uz add-zsh-hook
+  _ros2_argcomplete_precmd() {
+    [[ -n "${PIXI_ENVIRONMENT_NAME:-}" ]] || return
+    command -v register-python-argcomplete >/dev/null 2>&1 || return
+
+    autoload -Uz bashcompinit && bashcompinit
+    eval "$(register-python-argcomplete ros2)"
+
+    # 一度設定できたら不要なので消す
+    add-zsh-hook -d precmd _ros2_argcomplete_precmd
+    unfunction _ros2_argcomplete_precmd 2>/dev/null
+  }
+
+  add-zsh-hook precmd _ros2_argcomplete_precmd
 fi
 {{- end }}
