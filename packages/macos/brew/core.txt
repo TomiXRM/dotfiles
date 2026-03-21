@@ -10,3 +10,4 @@ imagemagick
 gh
 starship
 zellij
+pixi

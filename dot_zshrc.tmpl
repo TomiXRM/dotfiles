@@ -1,6 +1,5 @@
 export ZSH="$HOME/.oh-my-zsh"
 
-# No theme - using Starship
 ZSH_THEME=""
 
 plugins=(
@@ -10,35 +9,37 @@ plugins=(
   zsh-syntax-highlighting
 )
 
-# 補完で小文字でも大文字にマッチさせる
+# ===== 補完設定 =====
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
-
-# 補完候補を詰めて表示
 setopt list_packed
-
-# 補完候補一覧をカラー表示
 autoload colors
 zstyle ':completion:*' list-colors ''
 
 # コマンドのスペルを訂正
 setopt correct
 
-autoload -U compinit; compinit # zshの新しい補完システムを有効にする
-autoload -U colors; colors # 色指定できるようにする
-
-HISTSIZE=10000
-SAVEHIST=10000
-
+# ===== oh-my-zsh 初期化 =====
+# NOTE: oh-my-zsh は内部で compinit を実行するため、明示的な compinit は不要
 if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
   source "$ZSH/oh-my-zsh.sh"
 else
   echo "oh-my-zsh not found at $ZSH; continuing without it." >&2
+  # oh-my-zsh がない場合のみ手動で compinit を実行。キャッシュに保存し24時間だけ有効。
+  autoload -Uz compinit
+  if [[ -n ${ZDOTDIR}/.zcompdump(#qNmh+24) ]]; then
+    compinit
+  else
+    compinit -C
+  fi
 fi
+
+# ===== 標準設定 =====
+HISTSIZE=10000
+SAVEHIST=10000
 
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
-
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
 # Starship prompt
@@ -46,10 +47,11 @@ if type starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
 
+# ===== ROS2 設定（chezmoi feature flag管理） =====
 {{- $features := get . "features" | default dict }}
 {{- $ros2Enabled := get $features "ros2" | default false }}
 {{- if and $ros2Enabled (eq .chezmoi.os "linux") }}
-# ROS2 (Linux only; enabled through chezmoi feature flag)
+# ROS2 (Linux only)
 autoload -Uz bashcompinit
 bashcompinit
 
@@ -68,5 +70,11 @@ done
 
 if [[ "$ros_setup_found" != true ]]; then
   echo "ROS2 feature is enabled, but no /opt/ros/*/setup.zsh was found." >&2
+fi
+
+{{- else if and $ros2Enabled (eq .chezmoi.os "darwin") }}
+# ROS2 (MacOS only)
+if type pixi >/dev/null 2>&1; then
+  eval "$(pixi completion --shell zsh)"
 fi
 {{- end }}
