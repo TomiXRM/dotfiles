@@ -3,3 +3,4 @@ zed
 google-chrome
 ghostty
 openinterminal
+karabiner-elements
