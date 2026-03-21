@@ -2,3 +2,4 @@ visual-studio-code
 zed
 google-chrome
 ghostty
+openinterminal
