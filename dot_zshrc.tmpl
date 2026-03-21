@@ -46,10 +46,12 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 if type starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
+
+# ===== ROS2 設定（chezmoi feature flag管理） =====
 {{- $features := get . "features" | default dict }}
 {{- $ros2Enabled := get $features "ros2" | default false }}
 {{- if and $ros2Enabled (eq .chezmoi.os "linux") }}
-# ROS2 (Linux only; enabled through chezmoi feature flag)
+# ROS2 (Linux only)
 autoload -Uz bashcompinit
 bashcompinit
 
@@ -68,5 +70,11 @@ done
 
 if [[ "$ros_setup_found" != true ]]; then
   echo "ROS2 feature is enabled, but no /opt/ros/*/setup.zsh was found." >&2
+fi
+
+{{- else if and $ros2Enabled (eq .chezmoi.os "darwin") }}
+# ROS2 (MacOS only)
+if type pixi >/dev/null 2>&1; then
+  eval "$(pixi completion --shell zsh)"
 fi
 {{- end }}
