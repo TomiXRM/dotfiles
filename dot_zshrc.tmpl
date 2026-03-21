@@ -85,6 +85,7 @@ if type pixi >/dev/null 2>&1; then
 
     autoload -Uz bashcompinit && bashcompinit
     eval "$(register-python-argcomplete ros2)"
+    eval "$(register-python-argcomplete colcon)"
 
     # 一度設定できたら不要なので消す
     add-zsh-hook -d precmd _ros2_argcomplete_precmd
