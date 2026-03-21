@@ -46,28 +46,27 @@ if type starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
 fi
 
-{{- $ros2Enabled := get (get . "features" | default dict) "ros2" | default false }}
-{{- if $ros2Enabled }}
+{{- $features := get . "features" | default dict }}
+{{- $ros2Enabled := get $features "ros2" | default false }}
+{{- if and $ros2Enabled (eq .chezmoi.os "linux") }}
 # ROS2 (Linux only; enabled through chezmoi feature flag)
-if [[ "$OSTYPE" == linux* ]]; then
-  autoload -Uz bashcompinit
-  bashcompinit
+autoload -Uz bashcompinit
+bashcompinit
 
-  ros_setup_found=false
-  for setup in /opt/ros/*/setup.zsh(N); do
-    source "$setup"
-    export ROS_DOMAIN_ID=7
-    ros_setup_found=true
+ros_setup_found=false
+for setup in /opt/ros/*/setup.zsh(N); do
+  source "$setup"
+  export ROS_DOMAIN_ID=7
+  ros_setup_found=true
 
-    # Enable ROS2 shell completion if available.
-    if [[ -n "$ROS_DISTRO" ]] && [[ -r /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh ]]; then
-      source /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh
-    fi
-    break
-  done
-
-  if [[ "$ros_setup_found" != true ]]; then
-    echo "ROS2 feature is enabled, but no /opt/ros/*/setup.zsh was found." >&2
+  # Enable ROS2 shell completion if available.
+  if [[ -n "$ROS_DISTRO" ]] && [[ -r /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh ]]; then
+    source /opt/ros/$ROS_DISTRO/share/ros2cli/environment/ros2-argcomplete.zsh
   fi
+  break
+done
+
+if [[ "$ros_setup_found" != true ]]; then
+  echo "ROS2 feature is enabled, but no /opt/ros/*/setup.zsh was found." >&2
 fi
 {{- end }}
