@@ -6,6 +6,18 @@
 /bootstrap
 /docs
 /packages
+
+{{- if eq .chezmoi.os "darwin" }}
+/.xinputrc
+/.config/autostart/org.fcitx.Fcitx5.desktop
+/.config/fcitx5/**
+/.config/toshy/**
+/.local/share/gnome-shell/**
+{{- end }}
+
 /.config/fcitx5/conf/cached_layouts
+
+{{- if eq .chezmoi.os "linux" }}
+/.config/ghostty/**
 /.config/karabiner/**
-!/.config/karabiner/karabiner.json
+{{- end }}

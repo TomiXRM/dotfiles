@@ -233,6 +233,24 @@ feature を false にしても、自動 uninstall はしません。止まるの
 
 `ros2` だけは repo 側に機能フラグを持ちつつ、install 自体は公式 ROS 2 手順に従います。
 
+## テンプレートと ignore の方針
+
+基本方針は、特定の OS にしか必要ない設定は `.chezmoiignore.tmpl` で管理することです。
+
+`*.tmpl` を使うのは、`chezmoi data` や `~/.config/chezmoi/chezmoi.toml` に基づく条件分岐が必要な場合に限ります。
+
+使い分けの基準:
+
+- ファイルの存在自体を OS で切り替えたいものは `.chezmoiignore.tmpl`
+- ファイルの中身を OS や machine ごとに変えたいものは `*.tmpl`
+- `hostname` や feature flag など、`chezmoi data` を参照して分岐するものは `*.tmpl`
+
+例:
+
+- macOS 専用の Ghostty 設定は静的ファイルとして置き、Linux では `.chezmoiignore.tmpl` で除外する
+- Ubuntu 専用の `fcitx5` / `toshy` / `xremap` は Linux 側でのみ対象にする
+- `features.kicad` のような機能フラグで内容を変えるものだけ `*.tmpl` を使う
+
 ## リポジトリ境界
 
 配置対象:
