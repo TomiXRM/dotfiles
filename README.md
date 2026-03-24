@@ -36,6 +36,8 @@ mise install
 
 `mise` の missing command 自動 install は無効化しています。runtime 導入は常に明示実行です。
 
+特定の OS だけに必要な設定は `.chezmoiignore.tmpl` で file 自体を分け、`chezmoi data` や `~/.config/chezmoi/chezmoi.toml` に基づく条件分岐が必要なときだけ `*.tmpl` を使います。
+
 ## 実行シーケンス
 
 ```mermaid
