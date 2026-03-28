@@ -206,8 +206,3 @@ sequenceDiagram
 
 - `flatpak list | grep org.kicad.KiCad`
 - `ros2 --help`
-
-## 今後の論点
-
-- fresh machine に Toshy 用追加 package が必要か
-- Zed を Ubuntu でどう扱うか

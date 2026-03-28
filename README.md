@@ -1,86 +1,37 @@
-# chezmoi dotfiles
+# dotfiles
 
-このリポジトリは、`Ubuntu` と `macOS` を対象にした `chezmoi` ベースの dotfiles 管理リポジトリです。
-
-- 正式対応: `Ubuntu`, `macOS`
-- Windows: 未対応
-- ただし Windows 用資産は `assets/windows/` に置く
-- 人間にも LLM agent にも読みやすい構造を維持する
-
-設計の正本は [docs/architecture.md](docs/architecture.md) です。
-
-OS ごとの補足:
-
-- [docs/ubuntu.md](docs/ubuntu.md)
-- [docs/macos.md](docs/macos.md)
+`Ubuntu` と `macOS` 向けの `chezmoi` ベース dotfiles です。設計の正本は [docs/architecture.md](docs/architecture.md) に置き、OS 固有の補足は [docs/ubuntu.md](docs/ubuntu.md) と [docs/macos.md](docs/macos.md) に分けます。
 
 ## セットアップ
 
-初回:
+新規マシン:
 
 ```bash
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply TomiXRM
 ```
 
-`chezmoi` がすでに入っている場合:
+`chezmoi` 導入済み:
 
 ```bash
-chezmoi init --apply <github-user-or-repo-url>
+chezmoi init --apply TomiXRM
 ```
 
-`chezmoi apply` で `mise` 本体を bootstrap し、その後にユーザー空間の runtime を明示的に入れます。
+`chezmoi apply` は dotfiles 配置と軽量 script 実行までを担います。ユーザー空間 runtime はその後に明示的に入れます。
 
 ```bash
 mise install
 ```
 
-`mise` の missing command 自動 install は無効化しています。runtime 導入は常に明示実行です。
+## 要点
 
-特定の OS だけに必要な設定は `.chezmoiignore.tmpl` で file 自体を分け、`chezmoi data` や `~/.config/chezmoi/chezmoi.toml` に基づく条件分岐が必要なときだけ `*.tmpl` を使います。
-
-## 実行シーケンス
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as chezmoi
-    participant S as Scripts
-    participant O as OS Package Manager
-    participant M as mise
-    participant R as ROS 2
-
-    U->>C: init --apply / apply
-    C->>C: dotfiles を配置
-    C->>S: run_onchange_* / run_once_* / run_*
-    S->>O: apt / flatpak / brew / cask
-    O-->>S: 必要なものだけ同期
-    S->>M: mise 本体を bootstrap
-    C-->>U: apply 完了
-    U->>M: mise install
-    U->>R: 必要なら公式手順で ROS 2 を導入
-```
-
-## 機能フラグ
-
-マシンごとの任意機能は `~/.config/chezmoi/chezmoi.toml` で切り替えます。
+- 正式対応は `Ubuntu` と `macOS`。`Windows` は未対応で、資産は `assets/windows/` にだけ置く
+- file の存在を OS で切り替える時は `.chezmoiignore.tmpl` を使う
+- file の内容を `chezmoi data` や feature flag で切り替える時だけ `*.tmpl` を使う
+- `features.ros2` は Ubuntu 専用の設定分岐で、ROS 2 の自動 install はしない
+- 任意機能は `~/.config/chezmoi/chezmoi.toml` の `data.features` で切り替える
 
 ```toml
 [data.features]
 ros2 = false
 kicad = false
 ```
-
-補足:
-
-- `ros2` は Ubuntu 専用
-- `kicad` は任意
-- `ros2 = true` は ROS 関連設定を有効にするだけで、ROS 2 自体は install しない
-- macOS 側は `brew` 導入済みを前提にしている
-
-## 現在の状態
-
-2026年3月14日時点:
-
-- Ubuntu 側の v2 フローは再構成と実機検証が完了
-- macOS 側は主要な `brew` / `cask` / shell 初期化フローの実機検証を進めている
-- macOS の `cask` は Homebrew 管理外の既存 app / binary artifact を検知した場合、安全のため skip する
