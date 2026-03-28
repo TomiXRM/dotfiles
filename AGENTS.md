@@ -1,68 +1,44 @@
 # リポジトリ運用メモ
 
-## 構成
+設計・構成・対応 OS・配置ルール・feature flag・script 方針は [docs/architecture.md](docs/architecture.md) を正本とする。`AGENTS.md` には重複して書かない。
 
-- `README.md` は人間向けの短い入口
-- `docs/architecture.md` は v2 設計の一次情報
-- `docs/ubuntu.md` は Ubuntu 固有メモ
-- `docs/macos.md` は macOS 検証メモ
-- 配置対象は root の `dot_*`, `private_*`, `run_onchange_*`, `run_once_*`, `run_*`
-- repo 専用の資料や資産は `docs/`, `packages/`, `assets/`, `.vscode/` に置く
-- Windows 用ファイルは `assets/windows/` に置くが、Windows 自体はまだ正式対応しない
+## 参照順
 
-## 対応 OS
+- 入口: `README.md`
+- 設計判断: `docs/architecture.md`
+- OS 固有の補足: `docs/ubuntu.md`, `docs/macos.md`
 
-- `Ubuntu`: 主対象
-- `macOS`: 対応対象
-- `Windows`: 未対応
+## 変更時の最低限
 
-## 入口コマンド
-
-- 新規マシン:
-  - `sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <github-user-or-repo-url>`
-- `chezmoi` 導入済み:
-  - `chezmoi init --apply <github-user-or-repo-url>`
-- ユーザー空間 runtime 導入:
-  - `mise install`
-
-## Script ルール
-
-- `run_onchange_*` は manifest 駆動の再実行可能な処理と共有 bootstrap に使う
-- `run_once_*` は `chsh` のような軽い一回処理だけに使う
-- `run_*` は GUI セッション依存の軽処理に使う
-- `mise` 本体の bootstrap は script に入れてよいが、`mise install` は script に入れない
-- `cargo install` は標準 apply flow に入れない
-- script は OS ごとに分離し、責務を狭く保つ
-
-## 機能フラグ
-
-- 任意機能は `~/.config/chezmoi/chezmoi.toml` で制御する
-- 現在の機能:
-  - `features.ros2`: Ubuntu 専用
-  - `features.kicad`: 任意
-- `features.ros2` は ROS 2 の自動 install ではなく、ROS-aware な設定分岐のために使う
-
-## リポジトリ境界
-
-- root に file を追加する前に、配置対象か repo 専用かを決める
-- repo 専用なら `.chezmoiignore.tmpl` に入れる
-- docs, package manifest, editor cache, local state を `$HOME` に漏らさない
-
-## 最低限の確認
-
-- shell script: `bash -n`
-- template script: `chezmoi execute-template < file.tmpl | bash -n`
-- JSON: `jq empty`
-- Python config: `python3 -m py_compile`
-- 設計変更時は `README.md` と `docs/architecture.md` を合わせる
+- 設計に関わる変更は `docs/architecture.md` を更新し、`README.md` は入口として整合だけ保つ
+- 編集は source state で行い、`$HOME` の target file を直接編集しない
+- source から target を確認する時は `chezmoi target-path <source-path>` を使う
+- target から source を確認する時は `chezmoi source-path <target-path>` を使う
+- render 後の target 内容を確認する時は `chezmoi cat <target-path>` を使う
+- repo 全体の非破壊検証は `make validate` を入口にする
+- 変更後は対象 `source-path` ごとに次を順に確認する
+- `chezmoi status --source-path <source-path>`
+- `chezmoi diff --source-path <source-path>`
+- `chezmoi apply --dry-run --verbose --source-path <source-path>`
+- file / symlink を安全に staging 検証したい時は scripts を除外して次を使う
+- `chezmoi apply --destination /tmp/chezmoi-validate-home --exclude=scripts --source-path <source-path>`
+- `chezmoi verify --destination /tmp/chezmoi-validate-home --exclude=scripts --source-path <source-path>`
+- `run_*` は staging apply しない。render と syntax check と dry-run までに留める
+- `run_*.sh.tmpl`: `chezmoi execute-template --file <source-path> | bash -n`
+- zsh config の template: `chezmoi execute-template --file <source-path> | zsh -n`
+- zsh config の非 template: `zsh -n <file>`
+- shell script を新規追加した時だけ `bash -n <file>`
+- shell 以外の `*.tmpl`: `chezmoi execute-template --file <source-path> >/dev/null`
+- JSON: `jq empty <file>`
+- Python config: `python3 -m py_compile <file>`
+- feature flag や template data を触った時は `chezmoi data --format=yaml` で現在値を確認する
+- feature flag の分岐を試す時は `chezmoi execute-template --file <source-path> --override-data '{"features":{"ros2":false}}'` のように確認する
+- `run_onchange_*` を再評価したい時だけ `chezmoi state delete-bucket --bucket=entryState` を使う
+- `run_once_*` を再実行したい時だけ `chezmoi state delete-bucket --bucket=scriptState` を使う
 
 ## コミット
 
 - commit message は日本語で短く命令形
 - Pull Request の title と body も日本語で書く
 - 変更は可能な限り 1 関心に絞る
-- 大きい変更では次を明記する
-  - 対象 OS
-  - 機能フラグ
-  - 検証手順
-  - `chezmoi apply` 後の手動作業
+- 大きい変更では対象 OS、機能フラグ、検証手順、`chezmoi apply` 後の手動作業を明記する
