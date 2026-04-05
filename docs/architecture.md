@@ -52,6 +52,8 @@ chezmoi init --apply <github-user-or-repo-url>
 mise install
 ```
 
+現在は `rust` に加えて `delta` も `mise install` 側で揃える。
+
 ## Script 方針
 
 - `run_onchange_*`: manifest 駆動の再実行可能な同期と共有 bootstrap に使う

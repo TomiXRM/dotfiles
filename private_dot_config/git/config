@@ -13,8 +13,18 @@
 	autoCRLF = input
 	symlinks = true
 	excludesFile = ~/.config/git/ignore
+	pager = delta
 [commit]
 	template = ~/.config/git/commit_template
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	side-by-side = true
+	syntax-theme = Monokai Extended
+	line-numbers = true
+[merge]
+	conflictStyle = zdiff3
 [credential "https://github.com"]
 	helper =
 	helper = !/usr/bin/gh auth git-credential

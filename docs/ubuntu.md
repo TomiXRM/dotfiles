@@ -57,6 +57,7 @@ flowchart TB
 補足:
 
 - `mise install` は引き続き手動実行
+- `git-delta` は apt ではなく [dot_mise.toml](../dot_mise.toml) の `github:dandavison/delta` として `mise install` で入れる
 - `dot_zprofile` が `~/.local/bin` を `PATH` に入れる
 
 ### 3. GUI apt と flatpak
