@@ -7,6 +7,7 @@ uv = "latest"
 
 # Rust toolchain
 rust = "latest"
+"github:dandavison/delta" = "latest"
 
 # Terminal file manager
 yazi = "latest"
