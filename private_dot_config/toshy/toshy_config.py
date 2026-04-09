@@ -43,7 +43,7 @@ dump_diagnostics_key(Key.F15)   # default key: F15
 emergency_eject_key(Key.F16)    # default key: F16
 
 timeouts(
-    multipurpose        = 0.15,      # default: 1 sec (custom: faster multipurpose trigger)
+    multipurpose        = 0.25,      # default: 1 sec (custom: faster multipurpose trigger)
     suspend             = 1,        # default: 1 sec, try 0.1 sec for touchpads/trackpads
 )
 
@@ -1999,7 +1999,8 @@ modmap("Cond modmap - GUI - Caps2Cmd - not Cbk kdb", {
     # cnfg.Caps2Cmd and
     # cnfg.screen_has_focus and
     not isKBtype('Chromebook')(ctx) and
-    matchProps(not_clas=terms_and_remotes_Str)(ctx)
+    matchProps(not_clas=terms_and_remotes_Str)(ctx) and
+    matchProps(not_devn="VMware VMware Virtual USB Keyboard")(ctx)
 )
 modmap("Cond modmap - GUI - Caps2Cmd - Cbk kdb", {
     Key.LEFT_META:              Key.RIGHT_CTRL,                 # Caps2Cmd - Chromebook
@@ -2230,6 +2231,8 @@ multipurpose_modmap("JIS IME dual-role controls(Windows)", {
     isKBtype('Windows', map='mmap terms Win')(ctx)
 )
 
+
+
 multipurpose_modmap("JIS IME dual-role controls(HHKB or Apple)", {
     # Eisu/Muhenkan (left of space) toggles English on tap, Ctrl when held
     Key.LEFT_META:             [Key.MUHENKAN, Key.RIGHT_CTRL],
@@ -2241,6 +2244,16 @@ multipurpose_modmap("JIS IME dual-role controls(HHKB or Apple)", {
     matchProps(devn="HHKB")(ctx) and
     isKBtype('Windows', map='mmap terms Win')(ctx)
     or isKBtype('Apple', map='mmap terms Apple')(ctx)
+)
+
+multipurpose_modmap("JIS IME dual-role VMware VMware Virtual USB Keyboard", {
+    # Eisu/Muhenkan (left of space) toggles English on tap, Ctrl when held
+    Key.CAPSLOCK:             [Key.MUHENKAN, Key.RIGHT_CTRL],
+    # Kana/Henkan (right of space) toggles Japanese on tap, Ctrl when held
+    Key.HANGEUL:               [Key.HENKAN, Key.RIGHT_CTRL],
+}, when = lambda ctx:
+    matchProps(not_clas=remoteStr)(ctx) and
+    matchProps(devn="VMware VMware Virtual USB Keyboard")(ctx)
 )
 
 
