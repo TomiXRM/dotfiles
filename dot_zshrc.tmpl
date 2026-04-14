@@ -52,6 +52,7 @@ fi
 # ===== ROS2 設定（chezmoi feature flag管理） =====
 {{- $features := get . "features" | default dict }}
 {{- $ros2Enabled := get $features "ros2" | default false }}
+{{- $embeddedEnabled := get $features "embedded" | default false }}
 {{- if and $ros2Enabled (eq .chezmoi.os "linux") }}
 # ROS2 (Linux only)
 autoload -Uz bashcompinit
@@ -96,4 +97,18 @@ if type pixi >/dev/null 2>&1; then
 
   add-zsh-hook precmd _ros2_argcomplete_precmd
 fi
+{{- end }}
+
+{{- if and $embeddedEnabled (eq .chezmoi.os "darwin") }}
+# ===== 組み込み開発設定（chezmoi feature flag管理） =====
+# Embedded development tools (Mac only)
+export ARM_NONE_EABI_VERSION="15.2.1-1.1.1"
+export PATH="$HOME/Library/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/${ARM_NONE_EABI_VERSION}/.content/bin:$PATH"
+export PATH="/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/Resources/bin:$PATH"
+{{- else if and $embeddedEnabled (eq .chezmoi.os "linux") }}
+# ===== 組み込み開発設定（chezmoi feature flag管理） =====
+# Embedded development tools (Linux only)
+export ARM_NONE_EABI_VERSION="15.2.1-1.1.1"
+export PATH="$HOME/.local/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/${ARM_NONE_EABI_VERSION}/.content/bin:$PATH"
+export PATH="$HOME/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin:$PATH"
 {{- end }}
