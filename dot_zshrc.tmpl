@@ -105,4 +105,9 @@ fi
 export ARM_NONE_EABI_VERSION="15.2.1-1.1.1"
 export PATH="$HOME/Library/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/${ARM_NONE_EABI_VERSION}/.content/bin:$PATH"
 export PATH="/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/Resources/bin:$PATH"
+{{- else if and $embeddedEnabled (eq .chezmoi.os "linux") }}
+# ===== 組み込み開発設定（chezmoi feature flag管理） =====
+# Embedded development tools (Linux only)
+# TODO: arm-none-eabi-gcc のパスを追加
+# TODO: STM32CubeProgrammer のパスを追加
 {{- end }}
