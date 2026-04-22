@@ -1,3 +1,4 @@
 # Packages that require extra repositories or manual source setup.
 tailscale
 code
+gh

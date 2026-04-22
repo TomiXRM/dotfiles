@@ -159,11 +159,13 @@ kicad = false
 
 - `tailscale`
 - `code`
+- `gh`
 
 公式導入ページ:
 
 - Tailscale: https://tailscale.com/docs/install/linux
 - VS Code: https://code.visualstudio.com/download
+- GitHub CLI: https://github.com/cli/cli/blob/trunk/docs/install_linux.md
 - Zed: https://zed.dev/docs/installation
 
 Zed は今のところ Ubuntu では手動後処理扱いです。
