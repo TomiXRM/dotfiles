@@ -19,6 +19,7 @@ clipboard-read = allow
 clipboard-write = allow
 
 # --- キーバインド設定（画面分割） ---
+{{- if eq .chezmoi.os "darwin" }}
 # Cmd+Enter で「下に」分割
 keybind = cmd+enter=new_split:down
 # Cmd+Shift+Enter で「右に」分割
@@ -33,6 +34,22 @@ keybind = cmd+shift+left=resize_split:left,20
 keybind = cmd+shift+right=resize_split:right,20
 keybind = cmd+shift+up=resize_split:up,20
 keybind = cmd+shift+down=resize_split:down,20
+{{- else }}
+# Super+Enter で「下に」分割
+keybind = super+enter=new_split:down
+# Super+Shift+Enter で「右に」分割
+keybind = super+shift+enter=new_split:right
+# Super + 矢印キー で分割した画面を「移動」
+keybind = super+left=goto_split:left
+keybind = super+right=goto_split:right
+keybind = super+up=goto_split:top
+keybind = super+down=goto_split:bottom
+# Super + Shift + 矢印キー でサイズを「調整」
+keybind = super+shift+left=resize_split:left,20
+keybind = super+shift+right=resize_split:right,20
+keybind = super+shift+up=resize_split:up,20
+keybind = super+shift+down=resize_split:down,20
+{{- end }}
 # ペイン境界線の色
 split-divider-color = #5A5A5A
 # 非フォーカスのペインを少しだけ暗くする
@@ -42,8 +59,10 @@ font-family = JetBrains Mono
 font-family = BIZ UDGothic
 font-feature = -dlig
 
+{{- if eq .chezmoi.os "darwin" }}
 macos-titlebar-style = tabs
 quick-terminal-position = "top"
 quick-terminal-screen = "main"
 quick-terminal-animation-duration = 0.3
 keybind = "global:cmd+shift+t=toggle_quick_terminal"
+{{- end }}

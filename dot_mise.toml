@@ -12,6 +12,9 @@ rust = "latest"
 # Terminal file manager
 yazi = "latest"
 
+# Shell prompt
+starship = "latest"
+
 # Family tree tool
 "github:trasta298/keifu" = "latest"
 

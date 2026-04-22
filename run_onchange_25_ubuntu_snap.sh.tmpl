@@ -1,0 +1,53 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_25_ubuntu_snap] Started at $(date) ==="
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu snap sync."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu snap sync."
+  exit 0
+fi
+
+if ! command -v snap >/dev/null 2>&1; then
+  echo "snap not found; skipping Ubuntu snap sync."
+  exit 0
+fi
+
+snap_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/snap/core.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#snap_packages[@]}" -eq 0 ]; then
+  echo "No Ubuntu snap packages configured."
+  exit 0
+fi
+
+missing_snap_packages=()
+for pkg in "${snap_packages[@]}"; do
+  if ! snap list "$pkg" >/dev/null 2>&1; then
+    missing_snap_packages+=("$pkg")
+  fi
+done
+
+if [ "${#missing_snap_packages[@]}" -eq 0 ]; then
+  echo "Ubuntu snap packages already satisfy manifests; skipping."
+  exit 0
+fi
+
+echo "Installing missing Ubuntu snap packages (${#missing_snap_packages[@]}): ${missing_snap_packages[*]}"
+for pkg in "${missing_snap_packages[@]}"; do
+  sudo snap install "$pkg" --classic 2>/dev/null || sudo snap install "$pkg"
+done
+{{- end -}}

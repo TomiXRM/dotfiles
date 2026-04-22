@@ -72,6 +72,28 @@ if [ "${#missing_core_packages[@]}" -eq 0 ] && [ "${#pending_thirdparty_packages
   exit 0
 fi
 
+# --- third-party リポジトリのセットアップ ---
+for pkg in "${pending_thirdparty_packages[@]}"; do
+  case "$pkg" in
+    gh)
+      if [ ! -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]; then
+        echo "Setting up GitHub CLI apt repository..."
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+          | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+          | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      fi
+      ;;
+    tailscale)
+      if [ ! -f /usr/share/keyrings/tailscale-archive-keyring.gpg ]; then
+        echo "Setting up Tailscale apt repository..."
+        curl -fsSL https://tailscale.com/install.sh | sh
+      fi
+      ;;
+  esac
+done
+
 sudo apt-get update
 
 if [ "${#missing_core_packages[@]}" -gt 0 ]; then
