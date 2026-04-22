@@ -18,11 +18,12 @@ flowchart TB
     A["10_ubuntu_apt<br/>core apt / third-party apt"]
     B["15_mise_install<br/>mise bootstrap"]
     C["20_ubuntu_gui<br/>GUI apt / flatpak"]
+    C2["25_ubuntu_snap<br/>snap packages"]
     D["30_ubuntu_input<br/>input apt / Toshy"]
     E["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
     F["手動<br/>mise install / ROS 2"]
 
-    A --> B --> C --> D --> E --> F
+    A --> B --> C --> C2 --> D --> E --> F
 ```
 
 ### 1. Core apt
@@ -78,7 +79,23 @@ flowchart TB
 
 - apt と flatpak の両方が満たされていれば、update / install をスキップする
 
-### 4. Input stack
+### 4. snap packages
+
+管理対象:
+
+- [run_onchange_25_ubuntu_snap.sh.tmpl](../run_onchange_25_ubuntu_snap.sh.tmpl)
+- [packages/ubuntu/snap/core.txt](../packages/ubuntu/snap/core.txt)
+
+役割:
+
+- apt リポジトリ追加不要で入れられるツールを snap で管理する
+
+補足:
+
+- インストール済みであれば再インストールをスキップする
+- `--classic` confinement が必要なパッケージは自動的にフォールバックする
+
+### 5. Input stack
 
 管理対象:
 
@@ -159,13 +176,11 @@ kicad = false
 
 - `tailscale`
 - `code`
-- `gh`
 
 公式導入ページ:
 
 - Tailscale: https://tailscale.com/docs/install/linux
 - VS Code: https://code.visualstudio.com/download
-- GitHub CLI: https://github.com/cli/cli/blob/trunk/docs/install_linux.md
 - Zed: https://zed.dev/docs/installation
 
 Zed は今のところ Ubuntu では手動後処理扱いです。
