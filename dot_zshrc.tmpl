@@ -20,6 +20,11 @@ zstyle ':completion:*' list-colors ''
 # コマンドのスペルを訂正
 setopt correct
 
+# ===== mise (ログインシェル以外でも有効化) =====
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
 # ===== oh-my-zsh 初期化 =====
 # NOTE: oh-my-zsh は内部で compinit を実行するため、明示的な compinit は不要
 if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
