@@ -39,11 +39,11 @@ keybind = cmd+shift+down=resize_split:down,20
 keybind = ctrl+enter=new_split:down
 # Ctrl+Shift+Enter で「右に」分割
 keybind = ctrl+shift+enter=new_split:right
-# Ctrl+Shift + 矢印キー で分割した画面を「移動」
-keybind = ctrl+shift+left=goto_split:left
-keybind = ctrl+shift+right=goto_split:right
-keybind = ctrl+shift+up=goto_split:top
-keybind = ctrl+shift+down=goto_split:bottom{{- end }}
+# Ctrl+hjkl で分割した画面を「移動」（vim風）
+keybind = ctrl+h=goto_split:left
+keybind = ctrl+l=goto_split:right
+keybind = ctrl+k=goto_split:top
+keybind = ctrl+j=goto_split:bottom{{- end }}
 # ペイン境界線の色
 split-divider-color = #5A5A5A
 # 非フォーカスのペインを少しだけ暗くする
