@@ -5,6 +5,13 @@
 # Python package manager (replaces pip, poetry, etc)
 uv = "latest"
 
+# Node.js LTS includes npm.
+node = "lts"
+
+# Agentic coding CLIs installed through npm.
+"npm:@openai/codex" = "latest"
+"npm:@anthropic-ai/claude-code" = "latest"
+
 # Rust toolchain
 rust = "latest"
 "github:dandavison/delta" = "latest"
