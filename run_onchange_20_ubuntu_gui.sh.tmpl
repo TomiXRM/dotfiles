@@ -6,6 +6,22 @@ echo "=== [run_onchange_20_ubuntu_gui] Started at $(date) ==="
 
 KICAD_ENABLED={{ get (get . "features" | default dict) "kicad" | default false }}
 
+host_arch="$(uname -m)"
+case "$host_arch" in
+  x86_64|amd64)
+    flatpak_arch="x86_64"
+    ;;
+  aarch64|arm64)
+    flatpak_arch="aarch64"
+    ;;
+  armv7l|armhf)
+    flatpak_arch="arm"
+    ;;
+  *)
+    flatpak_arch="$host_arch"
+    ;;
+esac
+
 if [ ! -r /etc/os-release ]; then
   echo "os-release not found; skipping Ubuntu GUI sync."
   exit 0
@@ -26,7 +42,7 @@ apt_gui_packages=(
 {{- end }}
 )
 
-flatpak_packages=(
+flatpak_manifest_entries=(
 {{- range (splitList "\n" (include "packages/ubuntu/flatpak/core.txt")) }}
 {{- $line := trim . }}
 {{- if and $line (not (hasPrefix "#" $line)) }}
@@ -43,8 +59,45 @@ flatpak_packages=(
 {{- end }}
 )
 
+flatpak_packages=()
+skipped_flatpak_packages=()
+
+is_supported_flatpak_arch() {
+  local app_arch="$1"
+  shift
+
+  if [ "$#" -eq 0 ]; then
+    return 0
+  fi
+
+  local supported_arch=""
+  for supported_arch in "$@"; do
+    if [ "$supported_arch" = "$app_arch" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+for entry in "${flatpak_manifest_entries[@]}"; do
+  read -r -a entry_parts <<< "$entry"
+  app="${entry_parts[0]}"
+  supported_arches=("${entry_parts[@]:1}")
+
+  if is_supported_flatpak_arch "$flatpak_arch" "${supported_arches[@]}"; then
+    flatpak_packages+=("$app")
+  else
+    skipped_flatpak_packages+=("$app")
+  fi
+done
+
+if [ "${#skipped_flatpak_packages[@]}" -gt 0 ]; then
+  echo "Skipping Ubuntu flatpak apps unsupported on $flatpak_arch: ${skipped_flatpak_packages[*]}"
+fi
+
 if [ "${#apt_gui_packages[@]}" -eq 0 ] && [ "${#flatpak_packages[@]}" -eq 0 ]; then
-  echo "No Ubuntu GUI packages configured."
+  echo "No Ubuntu GUI packages configured for $flatpak_arch."
   exit 0
 fi
 
@@ -80,6 +133,7 @@ if [ "${#missing_apt_gui_packages[@]}" -gt 0 ]; then
     sudo apt-get update
     echo "Installing missing Ubuntu GUI apt packages (${#missing_apt_gui_packages[@]}): ${missing_apt_gui_packages[*]}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_apt_gui_packages[@]}"
+    hash -r
   fi
 else
   echo "Ubuntu GUI apt packages already installed."

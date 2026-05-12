@@ -16,6 +16,7 @@
 ```mermaid
 flowchart TB
     A["10_ubuntu_apt<br/>core apt / third-party apt"]
+    A2["12_shell<br/>default shell"]
     B["15_mise_install<br/>mise bootstrap"]
     C["20_ubuntu_gui<br/>GUI apt / flatpak"]
     C2["25_ubuntu_snap<br/>snap packages"]
@@ -23,7 +24,7 @@ flowchart TB
     E["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
     F["手動<br/>mise install / ROS 2"]
 
-    A --> B --> C --> C2 --> D --> E --> F
+    A --> A2 --> B --> C --> C2 --> D --> E --> F
 ```
 
 ### 1. Core apt
@@ -43,6 +44,22 @@ flowchart TB
 
 - manifest が満たされていれば `apt-get update` をスキップする
 - third-party package は repo 追加済みであることを前提にする
+
+### 1.5. Default shell
+
+管理対象:
+
+- [run_onchange_12_shell.sh.tmpl](../run_onchange_12_shell.sh.tmpl)
+
+役割:
+
+- `zsh` を login shell に設定する
+
+補足:
+
+- `zsh` は Core apt で導入されるため、shell 設定は Core apt の後に実行する
+- すでに login shell が `zsh` の時は何もしない
+- shell 変更後はログアウトして入り直す
 
 ### 2. `mise` bootstrap
 
@@ -78,6 +95,9 @@ flowchart TB
 補足:
 
 - apt と flatpak の両方が満たされていれば、update / install をスキップする
+- flatpak manifest は `<app-id> [supported-flatpak-arch...]` 形式を許す
+- Apple Silicon 上の Ubuntu など `aarch64` 環境では、Flathub が `x86_64` だけ提供している app を skip する
+- `com.google.Chrome` は `x86_64` のみ。`aarch64` では `app.zen_browser.zen` を使う
 
 ### 4. snap packages
 
@@ -89,6 +109,7 @@ flowchart TB
 役割:
 
 - apt リポジトリ追加不要で入れられるツールを snap で管理する
+- Ubuntu apt にない `zellij` を入れる
 
 補足:
 
@@ -216,6 +237,7 @@ sequenceDiagram
 基本確認:
 
 - `echo "$SHELL"`
+- `command -v zellij`
 - `command -v mise`
 - `command -v fcitx5`
 - `test -f ~/.config/toshy/toshy_config.py`
@@ -224,4 +246,5 @@ sequenceDiagram
 任意確認:
 
 - `flatpak list | grep org.kicad.KiCad`
+- `flatpak list | grep com.google.Chrome` (`x86_64` のみ)
 - `ros2 --help`

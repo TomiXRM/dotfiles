@@ -56,8 +56,8 @@ mise install
 
 ## Script 方針
 
-- `run_onchange_*`: manifest 駆動の再実行可能な同期と共有 bootstrap に使う
-- `run_once_*`: `chsh` のような軽い一回処理だけに使う
+- `run_onchange_*`: manifest 駆動の再実行可能な同期、共有 bootstrap、依存 package 導入後に行う軽い idempotent 設定に使う
+- `run_once_*`: 依存関係を持たない軽い一回処理だけに使う
 - `run_*`: GUI セッション依存の軽い後処理だけに使う
 
 追加ルール:
