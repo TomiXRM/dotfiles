@@ -150,9 +150,18 @@ if [ "${#missing_flatpak_packages[@]}" -gt 0 ]; then
 
   echo "Installing missing Ubuntu flatpak apps (${#missing_flatpak_packages[@]}): ${missing_flatpak_packages[*]}"
   local_app=""
+  failed_flatpak_packages=()
   for local_app in "${missing_flatpak_packages[@]}"; do
-    sudo flatpak install -y --noninteractive flathub "$local_app"
+    if ! sudo flatpak install -y --noninteractive flathub "$local_app"; then
+      echo "Failed to install Ubuntu flatpak app; skipping: $local_app" >&2
+      failed_flatpak_packages+=("$local_app")
+    fi
   done
+
+  if [ "${#failed_flatpak_packages[@]}" -gt 0 ]; then
+    echo "Some Ubuntu flatpak apps could not be installed: ${failed_flatpak_packages[*]}" >&2
+    echo "Re-run chezmoi apply after checking Flathub availability or architecture support." >&2
+  fi
 else
   echo "Ubuntu flatpak apps already installed."
 fi
