@@ -1,0 +1,47 @@
+{{- if or (eq .chezmoi.os "linux") (eq .chezmoi.os "darwin") -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_12_shell] Started at $(date) ==="
+
+if ! command -v zsh >/dev/null 2>&1; then
+  echo "zsh not found; skipping shell setup."
+  exit 0
+fi
+
+ZSH_PATH="$(command -v zsh)"
+
+current_login_shell() {
+  if command -v getent >/dev/null 2>&1; then
+    getent passwd "$USER" | awk -F: '{print $7}'
+    return
+  fi
+
+  if command -v dscl >/dev/null 2>&1; then
+    dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}'
+    return
+  fi
+
+  printf '%s\n' "${SHELL:-}"
+}
+
+CURRENT_SHELL="$(current_login_shell)"
+
+if [ "$CURRENT_SHELL" = "$ZSH_PATH" ]; then
+  echo "zsh already set as default shell."
+  exit 0
+fi
+
+if [ -r /etc/shells ] && ! grep -Fxq "$ZSH_PATH" /etc/shells; then
+  echo "$ZSH_PATH is not listed in /etc/shells; skipping shell setup."
+  echo "You may need to add it before running: chsh -s $ZSH_PATH"
+  exit 0
+fi
+
+echo "Setting default shell to: $ZSH_PATH"
+if chsh -s "$ZSH_PATH" "$USER"; then
+  echo "Default shell updated. Log out and back in to apply."
+else
+  echo "chsh failed. You may need to run: chsh -s $ZSH_PATH"
+fi
+{{- end -}}

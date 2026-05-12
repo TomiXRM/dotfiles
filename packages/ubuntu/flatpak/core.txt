@@ -1,4 +1,6 @@
 # Core Ubuntu flatpak apps.
+# Format: <app-id> [supported-flatpak-arch...]
+# Omit supported architectures when the app supports all target architectures.
 app.zen_browser.zen
-com.google.Chrome
+com.google.Chrome x86_64
 com.axosoft.GitKraken
