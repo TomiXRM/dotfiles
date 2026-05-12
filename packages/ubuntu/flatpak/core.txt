@@ -3,4 +3,4 @@
 # Omit supported architectures when the app supports all target architectures.
 app.zen_browser.zen
 com.google.Chrome x86_64
-com.axosoft.GitKraken
+com.axosoft.GitKraken x86_64

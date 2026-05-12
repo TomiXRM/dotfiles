@@ -98,7 +98,8 @@ flowchart TB
 - apt と flatpak の両方が満たされていれば、update / install をスキップする
 - flatpak manifest は `<app-id> [supported-flatpak-arch...]` 形式を許す
 - Apple Silicon 上の Ubuntu など `aarch64` 環境では、Flathub が `x86_64` だけ提供している app を skip する
-- `com.google.Chrome` は `x86_64` のみ。`aarch64` では `app.zen_browser.zen` を使う
+- `com.google.Chrome` と `com.axosoft.GitKraken` は `x86_64` のみ。`aarch64` では `app.zen_browser.zen` を使う
+- flatpak app の install に失敗しても `chezmoi apply` 全体は止めず、失敗した app を警告として出す
 
 ### 4. snap packages
 
