@@ -8,9 +8,9 @@ uv = "latest"
 # Node.js LTS includes npm.
 node = "lts"
 
-# Agentic coding CLIs installed through npm.
-"npm:@openai/codex" = "latest"
-"npm:@anthropic-ai/claude-code" = "latest"
+# Agentic coding CLIs.
+codex = "latest"
+claude = "latest"
 
 # Rust toolchain
 rust = "latest"

@@ -8,7 +8,6 @@ plugins=(
   zsh-autosuggestions
   zsh-syntax-highlighting
   uv
-  chezmoi
 )
 
 # ===== 補完設定 =====
@@ -65,8 +64,11 @@ if command -v zoxide >/dev/null 2>&1; then
 fi
 
 # fzf shell integration
-if command -v fzf >/dev/null 2>&1; then
+if command -v fzf >/dev/null 2>&1 && fzf --zsh >/dev/null 2>&1; then
   source <(fzf --zsh)
+elif [[ -r /usr/share/doc/fzf/examples/key-bindings.zsh ]]; then
+  source /usr/share/doc/fzf/examples/key-bindings.zsh
+  [[ -r /usr/share/doc/fzf/examples/completion.zsh ]] && source /usr/share/doc/fzf/examples/completion.zsh
 fi
 
 # ===== ROS2 設定（chezmoi feature flag管理） =====
