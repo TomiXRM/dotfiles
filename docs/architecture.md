@@ -52,7 +52,7 @@ chezmoi init --apply <github-user-or-repo-url>
 mise install
 ```
 
-現在は `rust`、`delta`、Node.js LTS、npm 配布の coding agent CLI も `mise install` 側で揃える。
+現在は `rust`、`delta`、Node.js LTS、coding agent CLI も `mise install` 側で揃える。
 
 ## Script 方針
 
