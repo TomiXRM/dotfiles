@@ -76,6 +76,7 @@ flowchart TB
 
 - `mise install` は引き続き手動実行
 - `git-delta` は apt ではなく [dot_mise.toml](../dot_mise.toml) の `github:dandavison/delta` として `mise install` で入れる
+- Node.js LTS と npm 配布の Codex / Claude Code も [dot_mise.toml](../dot_mise.toml) から `mise install` で入れる
 - `dot_zprofile` が `~/.local/bin` を `PATH` に入れる
 
 ### 3. GUI apt と flatpak
@@ -239,6 +240,10 @@ sequenceDiagram
 - `echo "$SHELL"`
 - `command -v zellij`
 - `command -v mise`
+- `command -v node`
+- `command -v npm`
+- `command -v codex`
+- `command -v claude`
 - `command -v fcitx5`
 - `test -f ~/.config/toshy/toshy_config.py`
 - `gsettings get org.gnome.shell enabled-extensions`
