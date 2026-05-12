@@ -159,6 +159,7 @@ flowchart TB
 [data.features]
 ros2 = false
 kicad = false
+embedded = false
 ```
 
 ### `kicad`
@@ -187,6 +188,14 @@ kicad = false
 
 - `features.ros2 = true` だけでは ROS 2 は install されない
 - `/opt/ros/*/setup.zsh` が存在する時だけ shell 側で有効化される
+
+### `embedded`
+
+- Ubuntu 任意
+- `dot_zshrc.tmpl` 内では `embeddedEnabled` として扱われる
+- `true` の時、`~/.local/xPacks/@xpack-dev-tools/arm-none-eabi-gcc/${ARM_NONE_EABI_VERSION}/.content/bin` と STM32CubeProgrammer の PATH を追加する
+- toolchain と STM32CubeProgrammer 自体は install しない
+- `arm-none-eabi-gcc` の version は machine-local data の `[data.embedded] armNoneEabiVersion` で切り替える
 
 ## Third-party package
 
