@@ -34,4 +34,21 @@ mise install
 [data.features]
 ros2 = false
 kicad = false
+embedded = false
+```
+
+`features.embedded` は `dot_zshrc.tmpl` 内で `embeddedEnabled` として扱われ、`true` の時だけ組み込み開発用 PATH を追加します。ツール本体は自動 install しません。
+
+`arm-none-eabi-gcc` は xPack の配置済み version を PATH に追加します。version を切り替える時は、対象 version を install したうえで machine-local data を変えてから apply します。
+
+```toml
+[data.embedded]
+armNoneEabiVersion = "15.2.1-1.1.1"
+```
+
+反映確認:
+
+```bash
+chezmoi execute-template --file dot_zshrc.tmpl --override-data '{"features":{"embedded":true},"embedded":{"armNoneEabiVersion":"15.2.1-1.1.1"}}' | rg 'ARM_NONE_EABI_VERSION|arm-none-eabi'
+chezmoi apply --source-path dot_zshrc.tmpl
 ```

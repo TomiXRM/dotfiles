@@ -77,12 +77,22 @@ mise install
 [data.features]
 ros2 = false
 kicad = false
+embedded = false
 ```
 
 - `ros2`: Ubuntu 専用の設定分岐
 - `kicad`: 任意
+- `embedded`: 組み込み開発用の shell PATH 設定を有効にする
 - `features.ros2` は ROS-aware な設定を有効にするだけで、ROS 2 自体は install しない
+- `features.embedded` は `dot_zshrc.tmpl` 内では `embeddedEnabled` として扱い、toolchain 自体は install しない
 - feature を false にしても自動 uninstall はしない
+
+組み込み開発用 toolchain の version は machine-local data で切り替える。
+
+```toml
+[data.embedded]
+armNoneEabiVersion = "15.2.1-1.1.1"
+```
 
 ## テンプレートと ignore
 

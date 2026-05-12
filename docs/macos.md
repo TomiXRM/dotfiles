@@ -13,6 +13,8 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 - [packages/macos/cask/fonts.txt](../packages/macos/cask/fonts.txt) で Ghostty 向けフォントを処理する
 - `features.kicad = true` の時だけ [packages/macos/cask/kicad.txt](../packages/macos/cask/kicad.txt) を追加する
 - `features.ros2` は macOS では無視する
+- `features.embedded = true` の時、xPack の `arm-none-eabi-gcc` と STM32CubeProgrammer の PATH を shell に追加する
+- `arm-none-eabi-gcc` の version は machine-local data の `[data.embedded] armNoneEabiVersion` で切り替える
 - Ghostty は macOS 専用の設定として管理し、`~/.config/ghostty/config` に配置する
 
 ## Ghostty 用フォント方針
