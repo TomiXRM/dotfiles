@@ -15,6 +15,8 @@ Windows 用資産は `assets/windows/` に置いてよいが、`chezmoi` が `$H
 - 正規入口は `chezmoi` の公式フローだけを使う
 - `Ubuntu` と `macOS` を無理に同一化しない
 - repo 専用 file を `$HOME` に漏らさない
+- file の"存在"を OS で切り替える時は `.chezmoiignore.tmpl` を使う
+- file の"内容"を `chezmoi data` や feature flag で切り替える時だけ `*.tmpl` を使う
 - 暗黙の `hostname` や branch 分岐より `data.features` を優先する
 - `chezmoi apply` は dotfiles 配置と軽量 script 実行までを担い、すべての runtime install を自動化しない
 

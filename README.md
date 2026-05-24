@@ -1,6 +1,8 @@
 # dotfiles
 
-`Ubuntu` と `macOS` 向けの `chezmoi` ベース dotfiles です。設計の正本は [docs/architecture.md](docs/architecture.md) に置き、OS 固有の補足は [docs/ubuntu.md](docs/ubuntu.md) と [docs/macos.md](docs/macos.md) に分けます。
+- 設計: [docs/architecture.md](docs/architecture.md)
+- Ubuntu固有: [docs/ubuntu.md](docs/ubuntu.md)
+- Mac固有: [docs/macos.md](docs/macos.md)
 
 ## セットアップ
 
@@ -22,21 +24,13 @@ chezmoi init --apply TomiXRM
 mise install
 ```
 
-## 要点
-
-- 正式対応は `Ubuntu` と `macOS`。`Windows` は未対応で、資産は `assets/windows/` にだけ置く
-- file の存在を OS で切り替える時は `.chezmoiignore.tmpl` を使う
-- file の内容を `chezmoi data` や feature flag で切り替える時だけ `*.tmpl` を使う
-
 ## `chezmoi.toml` について
 
-任意機能は repo ではなく、そのマシンだけの chezmoi 設定で切り替えます。
+任意機能は repo ではなく、そのマシンだけの chezmoi 設定で切り替えます。編集先は通常 `~/.config/chezmoi/chezmoi.toml` 。このファイルはgitで管理しない。
 
 ```bash
 chezmoi edit-config
 ```
-
-編集先は通常 `~/.config/chezmoi/chezmoi.toml` です。この file は git 管理せず、Mac / Ubuntu / VM ごとに別々の値を持てます。
 
 ```toml
 [data.features]
@@ -49,6 +43,7 @@ armNoneEabiVersion = "15.2.1-1.1.1"
 # armNoneEabiVersion = "14.2.1-1.1"
 
 ```
+
 - `features`
   - `features.ros2`: Ubuntu 専用の設定分岐。ROS 2 自体は install しない
   - `features.kicad`: 任意の KiCad install 分岐
