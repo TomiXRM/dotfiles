@@ -15,7 +15,6 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 setopt list_packed
 autoload colors
 zstyle ':completion:*' list-colors ''
-compdef '_files' source # sourceの補完がファイル・ディレクトリのみになる
 
 # コマンドのスペルを訂正
 setopt correct
@@ -39,6 +38,9 @@ else
     compinit -C
   fi
 fi
+
+# compinit 後でないと compdef は使えないため、ここで定義する
+compdef '_files' source # sourceの補完がファイル・ディレクトリのみになる
 
 # ===== 標準設定 =====
 HISTSIZE=10000
