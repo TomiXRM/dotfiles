@@ -3750,6 +3750,33 @@ keymap("OptSpecialChars - US", {
 ###################################################################################################
 ###  SLICE_MARK_START: user_apps  ###  EDITS OUTSIDE THESE MARKS WILL BE LOST ON UPGRADE
 
+# Globally disable Ctrl+Shift+W (an easy typo of Ctrl+W) so it can never close
+# windows/tabs in any app: Chrome, Ghostty, GNOME Terminal, Nautilus, etc.
+# Placed in the user_apps slice so it survives Toshy reinstalls/upgrades and
+# takes priority over the app-specific keymaps defined further below.
+keymap("User: block Ctrl+Shift+W everywhere", {
+    C("C-Shift-W"):             None,                           # swallow physical Ctrl+Shift+W
+}, when = lambda ctx: cnfg.screen_has_focus)
+
+# Ubuntu only: the Cmd key (RC) makes Cmd+W act as Ctrl+W, which flings the
+# whole window away. Swallow Cmd+W entirely on Ubuntu. The physical Ctrl key
+# (LC) is a different modifier, so real Ctrl+W is unaffected.
+if DISTRO_ID == 'ubuntu':
+    keymap("User: block Cmd+W on Ubuntu", {
+        C("RC-W"):                  None,                           # swallow Cmd+W
+    }, when = lambda ctx: cnfg.screen_has_focus)
+
+# Ghostty only: close the focused pane (split) with Cmd+X. The Cmd key is
+# mapped to Right-Ctrl, so Ghostty would only ever see "ctrl"; binding ctrl+x
+# directly in Ghostty would clobber the shell's Ctrl+X (emacs prefix, nano,
+# etc.). Instead translate Cmd+X (RC-X) -> Ctrl+Shift+X here, which Ghostty
+# binds to close_surface. Physical Ctrl+X (Left-Ctrl) is untouched.
+keymap("User: Ghostty Cmd+X closes pane", {
+    C("RC-X"):                  C("C-Shift-X"),                 # Cmd+X -> Ghostty close_surface
+}, when = lambda ctx:
+    cnfg.screen_has_focus and
+    matchProps(clas="^.*ghostty.*$")(ctx)
+)
 
 ###  SLICE_MARK_END: user_apps  ###  EDITS OUTSIDE THESE MARKS WILL BE LOST ON UPGRADE
 ###################################################################################################

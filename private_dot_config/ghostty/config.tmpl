@@ -43,7 +43,10 @@ keybind = ctrl+shift+enter=new_split:right
 keybind = alt+h=goto_split:left
 keybind = alt+l=goto_split:right
 keybind = alt+k=goto_split:top
-keybind = alt+j=goto_split:bottom{{- end }}
+keybind = alt+j=goto_split:bottom
+# Ctrl+Shift+X でフォーカス中のペイン(split)を閉じる
+# （Cmd+W は Toshy が Ubuntu で握りつぶし、Ctrl+Shift+W も全環境でブロック済みのため）
+keybind = ctrl+shift+x=close_surface{{- end }}
 # ペイン境界線の色
 split-divider-color = #5A5A5A
 # 非フォーカスのペインを少しだけ暗くする
