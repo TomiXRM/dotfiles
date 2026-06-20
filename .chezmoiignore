@@ -1,1 +1,10 @@
 ros2_m1_native
+
+# ~/.claude : track ONLY agents/, rules/, skills/. Ignore every other direct
+# child of ~/.claude (runtime state, caches, history, sessions, plugins,
+# settings.json, secrets). `.claude/*` matches one level only, so files under
+# the un-ignored dirs below are kept.
+.claude/*
+!.claude/agents
+!.claude/rules
+!.claude/skills

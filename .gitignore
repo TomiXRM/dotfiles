@@ -36,3 +36,10 @@ __pycache__/
 
 # Editor settings
 .vscode/
+
+# Claude Code project-level state (not part of the dotfiles; ~/.claude is
+# tracked via private_dot_claude/). Includes runtime lock files.
+.claude/
+
+# Scratch / working files (PDF sources, extraction, eval artifacts)
+tmp/
