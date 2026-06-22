@@ -27,11 +27,13 @@ description: 難易度・重要度の高いコーディングタスクで、Code
 
 | ワーカー | ファミリ | 呼び出し | 多様性への寄与 |
 |---|---|---|---|
-| `codex` | GPT | `codex exec` | **高**（Conductor と別ファミリ） |
-| `glm` | GLM | `scripts/glm.sh` | **高**（別ファミリ） |
-| `claude` | Claude | `claude -p` | 低（Conductor と同ファミリ＝再帰/自己ワーカー。別 tier で多少のばらつき） |
+| `codex` | GPT | `codex exec`（Bash・CLIレグ） | **高**（Conductor と別ファミリ） |
+| `glm` | GLM | `scripts/glm.sh`（Bash・CLIレグ） | **高**（別ファミリ） |
+| `claude` | Claude | **ネイティブ SubAgent**（`Agent` ツール）／ `claude -p` はフォールバック | 低（Conductor と同ファミリ＝再帰/自己ワーカー。別 tier で多少のばらつき） |
 
 - Conductor 自身が Claude なので、**多様性の本体は codex と glm**。claude ワーカーは「再帰的トポロジ（自己呼び出しによるテスト時スケーリング）」枠と捉える。
+- **claude レグは codex の横に並ぶネイティブ SubAgent として出す**（Conductor が Claude Code のとき）。SubAgent は前提知識ゼロで spawn されるので `claude -p` と同等以上にブラインド＝フラットに判断でき、かつ `claude -p` の権限/stdin の地雷を回避し、結果がツール結果で返る。役割→`subagent_type`: Thinker=`Plan`／Worker=`general-purpose`（worktree 指定）／Verifier=`Explore`（Edit/Write を持たない＝構造的に read-only だが Bash でテストは実行可）。詳細は adapters.md「Transport A」。
+- ⚠️ ただし **SubAgent でも多様性は増えない**（同ファミリ）。安く生やせる分、Claude sub を量産して「クロスモデル」と錯覚しないこと。予算は codex/glm を優先。spawn 時は Conductor の仮説を渡さず**タスク仕様だけ**渡してブラインド性を守る。
 - `glm` 未設定でも止めない。pool から外し「多様性が落ちている」と明記して codex+claude で続行する（グレースフル縮退）。
 - 正確な呼び出しコマンド・出力捕捉・worktree・検証スキーマは `references/adapters.md` を読んでから dispatch する。最初に `SKILL` をこの skill ディレクトリに設定する: `SKILL="${SKILL:-$HOME/.claude/skills/cross-model-orchestration}"`（`adapters.md` の全コマンドがこれを参照する）。
 
@@ -43,7 +45,7 @@ description: 難易度・重要度の高いコーディングタスクで、Code
 ## 4つの原則（なぜ効くか）
 
 1. **異種性 > 同質性。** 同じ問いに別ファミリを当てると誤りの相関が下がる。codex を3回回すより codex+glm+claude を1回ずつの方が盲点が埋まりやすい。
-2. **Blind-first, then cross。** まず各モデルに**独立**に生成させ（互いの出力を見せない）、その後で相互に交差させる。最初から共有するとアンカリング/集団思考で多様性が潰れる。
+2. **Blind-first, then cross。** まず各モデルに**独立**に生成させ（互いの出力を見せない）、その後で相互に交差させる。最初から共有するとアンカリング/集団思考で多様性が潰れる。新規 spawn の SubAgent は会話文脈を一切持たない（プロンプトだけ）ので**構造的にブラインド＝フラットに判断できる**——この性質は資産。Conductor の仮説や他ワーカーの出力を親切に渡した瞬間に独立性が消えるので、ワーカーには**タスク仕様だけ**を渡す。
 3. **クロスファミリ検証（被検証者≠検証者ファミリ）。** ルールは「実装したモデルに自分の出力を検証させない」こと。Conductor と同ファミリかどうかは無関係——codex 実装を claude が検証するのは別ファミリなので可。**縮退時のフォールバック表**: pool={codex,glm,claude} なら被検証者以外の2ファミリから検証者を選ぶ。pool が {codex,claude} に縮退したら、claude 実装→codex 検証 / codex 実装→claude 検証（claude が Conductor と同ファミリでも、被検証者が codex なら別ファミリなので有効）。検証者が1ファミリしか残らない（被検証者と同一）状況になったら、交差検証は不能と明記し Conductor の単独レビューに落とす。
 4. **Conductor は投票でなく統合。** 多数決で1案を選ぶのではなく、**1つの基盤案**（最良の差分）を選び、他案からは**個別にレビューした上で安全な改善だけ**を接ぎ木する。独立実装どうしのハンクを盲目的に合体させると不変条件が壊れるので、無差別な union は禁止（Conductor paper の「適応的プロンプティング＋トポロジ設計」を Conductor が担う）。
 
@@ -52,7 +54,7 @@ description: 難易度・重要度の高いコーディングタスクで、Code
 実装方針を固めたい、設計が分かれうるが実装自体は中規模、というとき。ファイル編集は最後だけ。
 
 1. **フレーミング。** Conductor がタスクを1つの焦点化スペックにまとめ、各ワーカー向けに**強みを踏まえた個別プロンプト**を書く（`$RUN/prompt-{codex,glm,claude}.txt`）。
-2. **独立 plan（並列・ブラインド）。** codex / glm / (任意で claude) に read-only で方針を出させる → `$RUN/plan-*.md`。互いの案は見せない。
+2. **独立 plan（並列・ブラインド）。** codex / glm（CLI）と、任意で claude（`Plan` SubAgent を **codex の Bash 呼び出しと同じターンで**並列に出す）に read-only で方針を出させる → CLI は `$RUN/plan-*.md`、SubAgent は最終メッセージがそのまま plan。互いの案は見せない。
 3. **交差レビュー。** 各 plan を**別ファミリ**に渡し「この案の穴・見落とし・リスクを挙げよ」と批評させる。最低限、各案を1つ以上の別ファミリがレビューするトポロジを組む。
 4. **統合。** Conductor が全 plan + 全批評を読み、最強要素を接ぎ木した単一の実装計画を作る。割れた論点は理由付きで裁定。
 5. **実装 + 軽い検証。** Conductor（または指名 Worker）が実装し、ビルド/テストを通す。割れていた箇所は別ファミリに1回クロスレビューさせる。
@@ -62,10 +64,10 @@ description: 難易度・重要度の高いコーディングタスクで、Code
 一度失敗した、または失敗が高くつくタスク。**並列実装 → クロス検証 → 反復**。
 
 1. **隔離 worktree を用意。** 利用可能な各 Worker に detached `git worktree` を1つ（`references/adapters.md` のレシピ）。並列編集が衝突しない。worker 集合は pool プローブで動的に決める（glm 未設定なら作らない）。
-2. **並列実装（トーナメント）。** 利用可能なファミリを各自の worktree で**独立に**実装させる（編集は未コミットで残る）。
-3. **クロスファミリ検証。** 各 worker の差分を `git add -A && git diff --staged` で patch に捕捉し、**被検証者と別ファミリ**の Verifier に渡す。Verifier は「ソースを書き換えず、差分をレビューしテストを実行」して JSON verdict（`pass` / `issues`）を返す（呼び出しテンプレ・スキーマは adapters.md。codex は `--output-schema` で強制可）。
+2. **並列実装（トーナメント）。** 利用可能なファミリを各自の worktree で**独立に**実装させる（編集は未コミットで残る）。dispatch はヘテロだが capture は均一: codex/glm は Bash（`-C "$RUN/wt-$w"`）、claude レグは **`general-purpose` SubAgent を Conductor 作成の `$RUN/wt-claude` に向けて**実装させる（deep では Agent の `isolation:"worktree"` は使わない——パスがハーネス管理で codex 検証者が届かない）。
+3. **クロスファミリ検証。** 各 worker の差分を patch に捕捉し（`git add -A` 後にビルド成果物を除外してから `git diff --staged`）、**被検証者と別ファミリ**の Verifier に渡す。Verifier は「ソースを書き換えず、差分をレビューしテストを実行」して JSON verdict（`pass` / `issues`）を返す。**claude 検証者は `Explore` SubAgent が最適**（Edit/Write 不所持で構造的に read-only、Bash でテストは回せる）。codex は `--output-schema` で JSON 強制可（呼び出しテンプレ・スキーマは adapters.md）。
 4. **裁定（投票でなく統合）。** 勝者 patch を**1つの基盤**として `git apply --3way` で本 repo に採用し、テストで確認。他案からは個別レビュー済みの改善だけを足す（無差別なハンク合体は禁止）。**未コミットを branch merge しようとしない**——空ブランチで何も入らない（adapters.md の patch ベース採用を使う）。
-5. **反復（再帰的テスト時スケーリング）。** 全 fail なら、verdict の `issues` を次ラウンドの焦点プロンプトに畳み込んでステップ2（並列実装）へ戻る。**ラウンド上限**（既定2〜3）を最初に宣言し、未収束で打ち切ったら最良 patch + 残課題を正直に報告。
+5. **反復（再帰的テスト時スケーリング）。** 全 fail なら、verdict の `issues` を次ラウンドの焦点プロンプトに畳み込んでステップ2（並列実装）へ戻る。claude レグは前回の試行を踏まえるなら同じ SubAgent に `SendMessage`（文脈保持）、完全にブラインドな再挑戦なら新規 spawn——使い分ける。**ラウンド上限**（既定2〜3）を最初に宣言し、未収束で打ち切ったら最良 patch + 残課題を正直に報告。
 6. **後始末。** patch 採用を確認した**後で** worktree を削除し（`worktree remove --force` + `worktree prune`）、`$RUN` を消す。順序を守らないと未コミットの成果を失う。
 
 役割ローテの例（同一ファミリに権力を集中させない）: R1 = Thinker:glm / Worker:codex / Verifier:claude、R2 = 強みと R1 の結果で割り当て替え。

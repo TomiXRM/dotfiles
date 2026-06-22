@@ -29,9 +29,11 @@ command -v claude >/dev/null && echo "claude: ok"
 ```
 
 > Diversity note: the two genuinely **cross-family** workers are `codex` (GPT) and
-> `glm` (GLM). `claude` as a worker is the *same family* as the Conductor — useful
-> as a recursive/self worker (test-time scaling) or with a different tier (opus vs
-> sonnet) for a little extra spread, but it is not where the diversity payoff lives.
+> `glm` (GLM), dispatched as **CLI legs via Bash**. `claude` as a worker is the *same
+> family* as the Conductor — the recursive/self leg (test-time scaling); under Claude
+> Code dispatch it as a **native SubAgent** (Agent tool), not `claude -p` (see the
+> claude section). A different tier (opus vs sonnet) adds a little spread, but this is
+> not where the diversity payoff lives — keep the budget on codex + glm.
 
 ---
 
@@ -82,6 +84,65 @@ PROMPT
 
 ## claude (Claude family — self / recursive worker)
 
+Two transports. **When the Conductor is Claude Code, prefer the native SubAgent
+(the `Agent` tool) over `claude -p`** — it sits in the parallel fan-out *next to* the
+codex Bash call. A freshly spawned SubAgent receives only the prompt you pass it (zero
+conversation context), so it judges *flat* — at least as **blind** as a separate
+`claude -p` process, which is exactly what blind-first wants. It also sidesteps every
+`claude -p` permission/stdin gotcha (Transport B), returns its result as the tool
+result (no `-o`/`> file` capture), takes a per-call `model:` for tier spread, and can
+run read-only-yet-able-to-test as a verifier.
+
+> ⚠️ **Blindness is the asset — don't leak it back out.** Give the SubAgent the *task
+> spec only*, never the Conductor's current hypothesis or the other workers' outputs;
+> the moment you pre-load your thinking, it stops being an independent vote.
+> **Diversity reminder still holds:** a Claude SubAgent is the *self / recursive* leg,
+> NOT a cross-family worker. The diversity payoff lives in codex + glm — don't spawn
+> three Claude subs and call it cross-model. SubAgents are cheap to spawn; spend the
+> budget on the cross-family legs first.
+
+### Transport A — native SubAgent (default under Claude Code)
+
+Role → `subagent_type` (the read-only types have **no Edit/Write tool**, so they
+*cannot* mutate source — the read-only guarantee is structural, not prompt-based):
+
+| role | `subagent_type` | why it fits |
+|---|---|---|
+| Thinker / planner | `Plan` (or `Explore`) | read-only; reasons, can't edit |
+| Worker / implementer | `general-purpose` | has Edit **and** Bash; works in the worktree path you give it |
+| Verifier | `Explore` | **has Bash, lacks Edit/Write** → runs the suite, structurally cannot rewrite source |
+
+Dispatch via the `Agent` tool (issue it in the **same turn** as the codex Bash call so
+they run concurrently). Set `model:"sonnet"` when the Conductor is opus, for spread.
+
+- **Plan (blind):** `Agent(subagent_type:"Plan", model:"sonnet", prompt:<focused spec>)`.
+  The final message *is* the plan — use it directly.
+- **Implement (deep):** create the worktree **yourself**
+  (`git worktree add --detach "$RUN/wt-claude" HEAD`) and tell the `general-purpose`
+  sub to do ALL edits inside that exact path and run the tests there. Capture with the
+  same path-based `git -C "$RUN/wt-claude" diff` as the CLI workers.
+  > Do **not** use the Agent tool's own `isolation:"worktree"` in deep mode — that
+  > worktree is harness-managed and a sibling **codex** verifier can't reach its path,
+  > breaking cross-family capture/verify. A Conductor-owned worktree keeps every
+  > candidate uniform. (`isolation:"worktree"` is fine in *light* mode, where nothing
+  > external inspects the tree.)
+- **Verify (cross-family, Claude verifying codex/glm work):**
+  `Agent(subagent_type:"Explore", prompt:"review the diff in $RUN/wt-<cand>, run
+  <TEST_CMD> there, do NOT edit, output ONLY the verdict JSON {pass,tests_run,
+  tests_passed,issues[],summary}")`. Final message = the verdict; parse with jq.
+- **Iterate (deep R2+):** `SendMessage` to the *same* worker sub (keeps its prior
+  attempt in context) with the folded-in issues — **or** spawn a fresh sub for a fully
+  blind retry. SendMessage to build on the attempt; fresh spawn for independence.
+
+> Validated on a real run: a `general-purpose` sub edits only the worktree path it's
+> given and runs tests with no permission prompt; an `Explore` sub reports *"Edit tools
+> are unavailable to me,"* runs the suite, and returns parseable verdict JSON.
+
+### Transport B — `claude -p` (fallback; also the GLM transport)
+
+Use when the Conductor is **not** Claude Code, when you want a fully separate OS
+process, or for GLM (`glm.sh` runs the claude binary). Same family, same blindness.
+
 **Plan (read-only via plan mode):**
 
 ```bash
@@ -100,23 +161,22 @@ PROMPT
     < /dev/null ) > "$RUN/impl-claude.md"
 ```
 
-> **Two gotchas that will silently break a claude worker (learned the hard way):**
+> **Two gotchas that silently break the `claude -p` transport (learned the hard way;
+> Transport A avoids both):**
 > 1. **Always redirect `< /dev/null`.** `claude -p` still waits on stdin even when
 >    the prompt is an arg; without it you eat a ~3 s stall and a `no stdin data
 >    received` warning per call.
 > 2. **`acceptEdits` does NOT let it run commands.** It auto-approves *edits* only;
 >    Bash still needs approval, which a non-interactive `-p` can't give — so an
 >    implementer can't run its build/tests and a **verifier can't run the suite at
->    all**. Don't reach for `--permission-mode bypassPermissions` to fix it: when the
->    Conductor is itself Claude Code, the harness safety classifier *rejects*
->    spawning a `bypassPermissions` sub-agent. Instead **scope `--allowedTools` to
->    exactly the commands the worker needs** (whitelist your repo's real test runner,
->    e.g. `'Bash(pytest:*)'`). This both unblocks the tests and keeps the worker from
->    doing anything else.
+>    all**. Don't reach for `--permission-mode bypassPermissions`: when the Conductor
+>    is itself Claude Code, the harness safety classifier *rejects* spawning a
+>    `bypassPermissions` sub-agent. Instead **scope `--allowedTools`** to exactly the
+>    commands the worker needs (whitelist the real test runner, e.g. `'Bash(pytest:*)'`).
 
-Use `--output-format json` if you want structured metadata; default text is fine
-for plans/diffs. Prefer a *different* model tier than the Conductor for spread —
-e.g. set `CLAUDE_WORKER_MODEL=claude-sonnet-4-6` when the Conductor is opus.
+Use `--output-format json` for structured metadata; default text is fine for
+plans/diffs. Prefer a *different* tier than the Conductor — set
+`CLAUDE_WORKER_MODEL=claude-sonnet-4-6` when the Conductor is opus.
 
 ---
 
@@ -158,6 +218,13 @@ Workers leave their edits **uncommitted** in their worktree, so adoption is
 HEAD with no commits, so `git merge cmo/…` would import nothing and a forced
 cleanup would then destroy the only copy of the work. Capture the diff first,
 apply it, verify, and only then clean up.
+
+> **Dispatch is hybrid, capture is uniform.** The Conductor creates one worktree per
+> worker (loop below). The codex/glm legs implement via Bash (`-C "$RUN/wt-$w"`); the
+> claude leg implements via a **native `general-purpose` SubAgent told to work in
+> `$RUN/wt-claude`** (Transport A, not `claude -p`). Either way the edits land in the
+> Conductor-owned worktree, so the diff capture, cross-verify, and adoption steps are
+> identical for all legs — `wt-claude` is just another `$RUN/wt-$w`.
 
 ```bash
 SLUG="taskslug"
@@ -231,7 +298,22 @@ implementation. Run the verifier **inside the candidate's own worktree**
 tests exercise the *candidate*, not the baseline `$REPO`. (Running in `$REPO`
 would test unmodified code and silently pass.) Pick a verifier whose family
 differs from whoever produced the patch (see the fallback matrix in SKILL.md).
-Examples verifying GLM's work, which lives in `$RUN/wt-glm`:
+
+**Claude verifier — prefer the native `Explore` SubAgent** (Transport A). It has Bash
+but no Edit/Write, so it runs the suite yet *structurally* cannot rewrite the source —
+no `--allowedTools` juggling, no edit risk:
+
+```
+Agent(subagent_type:"Explore", model:"sonnet", prompt:
+  "A candidate change already exists in the git worktree $RUN/wt-<cand>.
+   Review `git -C $RUN/wt-<cand> diff HEAD`, then run <TEST_CMD> from inside that
+   worktree. Do NOT edit any file. Output ONLY the verdict JSON
+   {pass,tests_run,tests_passed,issues[],summary} as the last line.")
+# the SubAgent's final message IS the verdict JSON -> write to $RUN/verdict-<cand>.json, parse with jq
+```
+
+The CLI examples below (codex schema-enforced; `claude -p`/glm as fallback transport)
+verify GLM's work, which lives in `$RUN/wt-glm`:
 
 ```bash
 TEST_CMD="pytest -q"   # the repo's real test command
@@ -247,8 +329,9 @@ Review it for correctness/regressions; do NOT modify the source.
 Run \`$TEST_CMD\` here and report whether it passes. Emit the verdict JSON last.
 PROMPT
 
-# --- claude as verifier. NO acceptEdits: scope --allowedTools to the test runner +
-#     read tools only, so it CAN run the suite but structurally CANNOT edit source. ---
+# --- claude -p as verifier (FALLBACK transport; prefer the Explore SubAgent above).
+#     NO acceptEdits: scope --allowedTools to the test runner + read tools only, so it
+#     CAN run the suite but structurally CANNOT edit source. ---
 ( cd "$WT" && claude -p "This worktree already contains a candidate change (git diff HEAD).
 Review it (do not edit source), run \`$TEST_CMD\` here, and output ONLY the verdict JSON
 {pass,tests_run,tests_passed,issues[],summary}." \
