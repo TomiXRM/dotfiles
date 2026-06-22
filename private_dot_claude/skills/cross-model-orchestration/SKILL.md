@@ -38,7 +38,7 @@ description: 難易度・重要度の高いコーディングタスクで、Code
 役割（TRINITY 由来）。Conductor が各ターン、モデルの強みを見て割り当て、ファミリを**ローテ**して同一ファミリの偏りを避ける:
 - **Thinker** — 独立に方針/設計を立てる（読み取り専用）
 - **Worker** — 実装する（隔離 worktree 内で編集）
-- **Verifier** — テスト実行 + 差分レビューで pass/fail と論点を返す。**実装したのと必ず別ファミリ**に担当させる（自己検証は禁止）
+- **Verifier** — テスト実行 + 差分レビューで pass/fail と論点を返す。**実装したのと必ず別ファミリ**に担当させる（自己検証は禁止）。claude/glm を検証者にするときは `--allowedTools` でテストコマンドだけ許可する——`acceptEdits` ではコマンドを実行できず検証が空回りし、`bypassPermissions` は Conductor が Claude Code だと安全分類器に弾かれる（詳細・全テンプレは adapters.md）。worker サンドボックスがオフラインでテストコマンドを完走できることも事前に確認する（codex の workspace-write は外向き通信不可）。
 
 ## 4つの原則（なぜ効くか）
 

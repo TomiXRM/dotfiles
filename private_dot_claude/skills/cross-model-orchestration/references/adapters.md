@@ -12,6 +12,11 @@ SKILL="${SKILL:-$HOME/.claude/skills/cross-model-orchestration}"  # this skill's
 RUN="$(mktemp -d -t cmo-XXXX)"        # plans, reviews, verdicts
 REPO="$(git rev-parse --show-toplevel)"
 echo "SKILL=$SKILL  RUN=$RUN  REPO=$REPO"
+# Persist once: a Conductor that runs each Bash call in a FRESH shell (e.g. Claude
+# Code) loses these between calls, and re-running mktemp would make a new dir each
+# time. Save them and `source` at the top of every later step.
+{ echo "SKILL=$SKILL"; echo "RUN=$RUN"; echo "REPO=$REPO"; } > "$RUN/env.sh"
+# every later step starts with:  source "$RUN/env.sh"
 ```
 
 Probe the pool once and degrade gracefully (missing GLM = still codex+claude):
@@ -65,6 +70,14 @@ codex exec \
 PROMPT
 ```
 
+> **Sandbox has no network.** `-s workspace-write` blocks outbound network, so a
+> test command that *fetches* anything (`uv run --with pytest …`, `pip install`,
+> `npm ci`, first-run downloads) will fail and the worker silently falls back to
+> ad-hoc checks — a verdict that looks green but never ran your suite. Make the
+> repo's test command runnable **offline** in the worktree (deps preinstalled, or a
+> stdlib-only runner), or grant network with `-s danger-full-access` (weigh the
+> risk). Confirm the worker actually ran the real command, don't trust the summary.
+
 ---
 
 ## claude (Claude family — self / recursive worker)
@@ -74,7 +87,7 @@ PROMPT
 ```bash
 ( cd "$REPO" && claude -p "$(cat "$RUN/prompt-claude.txt")" \
     --model "${CLAUDE_WORKER_MODEL:-claude-opus-4-8}" \
-    --permission-mode plan ) > "$RUN/plan-claude.md"
+    --permission-mode plan < /dev/null ) > "$RUN/plan-claude.md"
 ```
 
 **Implement (inside an isolated worktree):**
@@ -82,11 +95,28 @@ PROMPT
 ```bash
 ( cd "$WT" && claude -p "$(cat "$RUN/prompt-claude.txt")" \
     --model "${CLAUDE_WORKER_MODEL:-claude-opus-4-8}" \
-    --permission-mode acceptEdits ) > "$RUN/impl-claude.md"
+    --permission-mode acceptEdits \
+    --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git:*)' \
+    < /dev/null ) > "$RUN/impl-claude.md"
 ```
 
+> **Two gotchas that will silently break a claude worker (learned the hard way):**
+> 1. **Always redirect `< /dev/null`.** `claude -p` still waits on stdin even when
+>    the prompt is an arg; without it you eat a ~3 s stall and a `no stdin data
+>    received` warning per call.
+> 2. **`acceptEdits` does NOT let it run commands.** It auto-approves *edits* only;
+>    Bash still needs approval, which a non-interactive `-p` can't give — so an
+>    implementer can't run its build/tests and a **verifier can't run the suite at
+>    all**. Don't reach for `--permission-mode bypassPermissions` to fix it: when the
+>    Conductor is itself Claude Code, the harness safety classifier *rejects*
+>    spawning a `bypassPermissions` sub-agent. Instead **scope `--allowedTools` to
+>    exactly the commands the worker needs** (whitelist your repo's real test runner,
+>    e.g. `'Bash(pytest:*)'`). This both unblocks the tests and keeps the worker from
+>    doing anything else.
+
 Use `--output-format json` if you want structured metadata; default text is fine
-for plans/diffs. Prefer a *different* model tier than the Conductor for spread.
+for plans/diffs. Prefer a *different* model tier than the Conductor for spread —
+e.g. set `CLAUDE_WORKER_MODEL=claude-sonnet-4-6` when the Conductor is opus.
 
 ---
 
@@ -100,13 +130,18 @@ with `GLM_API_KEY`. See the script header for env vars.
 GLM="$SKILL/scripts/glm.sh"
 
 # Plan (read-only):
-( cd "$REPO" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" --permission-mode plan ) \
+( cd "$REPO" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" --permission-mode plan < /dev/null ) \
     > "$RUN/plan-glm.md" || echo "glm unavailable — continuing without it"
 
 # Implement (in a worktree):
-( cd "$WT" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" --permission-mode acceptEdits ) \
-    > "$RUN/impl-glm.md"
+( cd "$WT" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" \
+    --permission-mode acceptEdits --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git:*)' \
+    < /dev/null ) > "$RUN/impl-glm.md"
 ```
+
+> Via the API-key path `glm.sh` runs the **claude binary** pointed at Z.ai, so the
+> same two gotchas apply: redirect `< /dev/null`, and scope `--allowedTools` (extra
+> flags are forwarded to claude) instead of relying on `acceptEdits` to run tests.
 
 > Degradation: decide the worker set up front from the pool probe. If `glm.sh --check`
 > failed, **do not** create a glm worktree or issue glm calls — drop glm from every
@@ -137,8 +172,13 @@ done
 
 # 2) Inspect / capture a worker's diff (working tree vs HEAD; no commit required).
 #    This is what a cross-family verifier reviews and what gets adopted.
+#    NOTE: a worker that ran the suite leaves build junk (__pycache__/, .pytest_cache/,
+#    node_modules/, *.pyc) in its tree; a blind `git add -A` would bake that into the
+#    patch. Drop the usual artifacts before capturing so the adopted diff is clean.
 for w in "${WORKERS[@]}"; do
-  git -C "$RUN/wt-$w" add -A          # stage so new files show in the diff
+  git -C "$RUN/wt-$w" add -A
+  git -C "$RUN/wt-$w" reset -q -- '**/__pycache__/**' '**/.pytest_cache/**' \
+      '**/node_modules/**' '*.pyc' 2>/dev/null || true
   git -C "$RUN/wt-$w" diff --staged > "$RUN/diff-$w.patch"
   echo "$w: $(wc -l < "$RUN/diff-$w.patch") diff lines"
 done
@@ -207,19 +247,29 @@ Review it for correctness/regressions; do NOT modify the source.
 Run \`$TEST_CMD\` here and report whether it passes. Emit the verdict JSON last.
 PROMPT
 
-# --- claude as verifier (instruct the schema; same shape). ---
+# --- claude as verifier. NO acceptEdits: scope --allowedTools to the test runner +
+#     read tools only, so it CAN run the suite but structurally CANNOT edit source. ---
 ( cd "$WT" && claude -p "This worktree already contains a candidate change (git diff HEAD).
 Review it (do not edit source), run \`$TEST_CMD\` here, and output ONLY the verdict JSON
 {pass,tests_run,tests_passed,issues[],summary}." \
     --model "${CLAUDE_WORKER_MODEL:-claude-opus-4-8}" \
-    --permission-mode acceptEdits ) > "$RUN/verdict-glm.json"
+    --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git diff:*)' 'Read' 'Grep' \
+    < /dev/null ) > "$RUN/verdict-glm.json"
 
-# --- glm as verifier (via the adapter; same instruction). ---
+# --- glm as verifier (via the adapter; same flags forwarded to claude). ---
 ( cd "$WT" && "$SKILL/scripts/glm.sh" "This worktree already contains a candidate change
 (git diff HEAD). Review it (do not edit source), run \`$TEST_CMD\` here, and output ONLY the
 verdict JSON {pass,tests_run,tests_passed,issues[],summary}." \
-    --permission-mode acceptEdits ) > "$RUN/verdict-glm.json"
+    --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git diff:*)' 'Read' 'Grep' \
+    < /dev/null ) > "$RUN/verdict-glm.json"
 ```
+
+> Scope the `Bash(...)` whitelist to *your repo's actual* test command. With no edit
+> tool granted, a stray "let me just fix it" edit is denied rather than silently
+> applied — the verifier reviews and runs, nothing more. (codex's verifier is held
+> read-only-ish by the prompt; if you want it airtight, run it `-s read-only` and run
+> tests yourself, but then it can't execute the suite — the allowedTools route keeps
+> claude/glm both able-to-test and unable-to-edit.)
 
 When the verifier needs the diff as text (e.g. for a focused review comment), it
 can read `$RUN/diff-glm.patch` — but tests must run in `$WT`, never `$REPO`.
