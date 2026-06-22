@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pass", "tests_run", "tests_passed", "issues", "summary"],
+  "properties": {
+    "pass": { "type": "boolean" },
+    "tests_run": { "type": "string" },
+    "tests_passed": { "type": "boolean" },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "where", "what"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["high", "medium", "low"] },
+          "where": { "type": "string" },
+          "what": { "type": "string" }
+        }
+      }
+    },
+    "summary": { "type": "string" }
+  }
+}
