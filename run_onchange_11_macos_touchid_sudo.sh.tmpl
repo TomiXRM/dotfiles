@@ -1,0 +1,50 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_11_macos_touchid_sudo] Started at $(date) ==="
+
+# Enable Touch ID (fingerprint) for sudo via the update-safe sudo_local file.
+# Introduced in macOS Sonoma; /etc/pam.d/sudo_local survives OS updates,
+# unlike editing /etc/pam.d/sudo directly.
+
+TARGET="/etc/pam.d/sudo_local"
+TEMPLATE="/etc/pam.d/sudo_local.template"
+PAM_LINE="auth       sufficient     pam_tid.so"
+
+# Match an active (uncommented) pam_tid.so auth line.
+ENABLED_RE='^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so'
+
+if [ ! -f "$TEMPLATE" ] && [ ! -f "$TARGET" ]; then
+  echo "sudo_local not supported on this macOS (no template); skipping."
+  echo "Touch ID for sudo requires macOS Sonoma or later."
+  exit 0
+fi
+
+if [ -f "$TARGET" ] && grep -Eq "$ENABLED_RE" "$TARGET"; then
+  echo "Touch ID for sudo already enabled in $TARGET."
+  exit 0
+fi
+
+echo "Enabling Touch ID for sudo (writing $TARGET; sudo password required)..."
+
+# Seed from Apple's template the first time so we keep its header comment.
+if [ ! -f "$TARGET" ] && [ -f "$TEMPLATE" ]; then
+  sudo cp "$TEMPLATE" "$TARGET"
+fi
+
+# Prefer uncommenting the template's line; fall back to appending.
+if [ -f "$TARGET" ] && grep -Eq '^[[:space:]]*#[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so' "$TARGET"; then
+  sudo sed -i '' -E 's/^([[:space:]]*)#([[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so)/\1\2/' "$TARGET"
+fi
+
+if ! { [ -f "$TARGET" ] && grep -Eq "$ENABLED_RE" "$TARGET"; }; then
+  printf '%s\n' "$PAM_LINE" | sudo tee -a "$TARGET" >/dev/null
+fi
+
+# Lock down to root-owned, world-readable (matches /etc/pam.d/sudo).
+sudo chown root:wheel "$TARGET"
+sudo chmod 444 "$TARGET"
+
+echo "Done. Open a NEW terminal/session, then run 'sudo -k && sudo true' to test."
+{{- end -}}
