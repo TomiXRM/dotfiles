@@ -21,3 +21,13 @@
   url = "https://github.com/zsh-users/zsh-completions.git"
   clone.args = ["--depth", "1"]
   pull.args = ["--ff-only"]
+
+# pixi-skills: standalone skills repo, shared by Claude (~/.claude/skills) and
+# Codex (~/.codex/skills) via per-skill symlinks in private_dot_claude/skills/
+# and private_dot_codex/skills/. Single clone, single source of truth, auto-pull.
+[".local/share/pixi-skills"]
+  type = "git-repo"
+  url = "https://github.com/TomiXRM/pixi-skills.git"
+  clone.args = ["--depth", "1"]
+  pull.args = ["--ff-only"]
+  refreshPeriod = "168h"
