@@ -74,7 +74,7 @@ validate-stage:
 	dest="$$(mktemp -d "$(VALIDATE_DEST_PREFIX).XXXXXX")"; \
 	trap 'rm -rf "$$source" "$$dest"' EXIT HUP INT TERM; \
 	tar --exclude=.git --exclude=.chezmoiexternal.toml -cf - . | tar -xf - -C "$$source"; \
-	echo "chezmoi apply --source $$source --destination $$dest --exclude=scripts"; \
-	$(CHEZMOI_BIN) apply --source "$$source" --destination "$$dest" --exclude=scripts; \
-	echo "chezmoi verify --source $$source --destination $$dest --exclude=scripts"; \
-	$(CHEZMOI_BIN) verify --source "$$source" --destination "$$dest" --exclude=scripts
+	echo "chezmoi apply --source $$source --destination $$dest --exclude=scripts,encrypted"; \
+	$(CHEZMOI_BIN) apply --source "$$source" --destination "$$dest" --exclude=scripts,encrypted; \
+	echo "chezmoi verify --source $$source --destination $$dest --exclude=scripts,encrypted"; \
+	$(CHEZMOI_BIN) verify --source "$$source" --destination "$$dest" --exclude=scripts,encrypted
