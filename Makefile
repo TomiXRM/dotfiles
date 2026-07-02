@@ -1,6 +1,7 @@
 .PHONY: validate validate-templates validate-shell validate-json validate-python validate-toml validate-stage
 
-CHEZMOI ?= chezmoi
+# chezmoi cd のサブシェルは CHEZMOI=1 を export するため、その名前を避ける
+CHEZMOI_BIN ?= chezmoi
 PYTHON ?= python3
 VALIDATE_SOURCE_PREFIX ?= /tmp/chezmoi-validate-source
 VALIDATE_DEST_PREFIX ?= /tmp/chezmoi-validate-home
@@ -14,15 +15,15 @@ validate-templates:
 		case "$$file" in \
 			*.sh.tmpl|*.bash.tmpl) \
 				echo "bash -n $$file"; \
-				$(CHEZMOI) execute-template --file "$$file" | bash -n; \
+				$(CHEZMOI_BIN) execute-template --file "$$file" | bash -n; \
 				;; \
 			dot_z*.tmpl|*.zsh.tmpl) \
 				echo "zsh -n $$file"; \
-				$(CHEZMOI) execute-template --file "$$file" | zsh -n; \
+				$(CHEZMOI_BIN) execute-template --file "$$file" | zsh -n; \
 				;; \
 			*) \
 				echo "render $$file"; \
-				$(CHEZMOI) execute-template --file "$$file" >/dev/null; \
+				$(CHEZMOI_BIN) execute-template --file "$$file" >/dev/null; \
 				;; \
 		esac; \
 	done
@@ -74,6 +75,6 @@ validate-stage:
 	trap 'rm -rf "$$source" "$$dest"' EXIT HUP INT TERM; \
 	tar --exclude=.git --exclude=.chezmoiexternal.toml -cf - . | tar -xf - -C "$$source"; \
 	echo "chezmoi apply --source $$source --destination $$dest --exclude=scripts"; \
-	$(CHEZMOI) apply --source "$$source" --destination "$$dest" --exclude=scripts; \
+	$(CHEZMOI_BIN) apply --source "$$source" --destination "$$dest" --exclude=scripts; \
 	echo "chezmoi verify --source $$source --destination $$dest --exclude=scripts"; \
-	$(CHEZMOI) verify --source "$$source" --destination "$$dest" --exclude=scripts
+	$(CHEZMOI_BIN) verify --source "$$source" --destination "$$dest" --exclude=scripts
