@@ -42,6 +42,9 @@ fi
 # compinit 後でないと compdef は使えないため、ここで定義する
 compdef '_files' source # sourceの補完がファイル・ディレクトリのみになる
 
+# ===== 秘密の環境変数 (age暗号化、chezmoi管理) =====
+[[ -r "$HOME/.config/ai/secrets.env" ]] && source "$HOME/.config/ai/secrets.env"
+
 # ===== 標準設定 =====
 HISTSIZE=10000
 SAVEHIST=10000
