@@ -11,3 +11,5 @@ gh
 starship
 zellij
 pixi
+terminal-notifier
+cliclick
