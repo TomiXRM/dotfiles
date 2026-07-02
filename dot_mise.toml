@@ -12,6 +12,9 @@ node = "lts"
 codex = "latest"
 claude = "latest"
 
+# Cosense (Scrapbox) CLI — 知識ベース連携 (Node >=24 必須)
+"npm:@helpfeel/cosense-cli" = "latest"
+
 # Rust toolchain
 rust = "latest"
 "github:dandavison/delta" = "latest"
