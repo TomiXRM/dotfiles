@@ -24,7 +24,8 @@
 #   ( cd "$WORKTREE" && scripts/glm.sh "Implement Y" --permission-mode acceptEdits )
 #
 # Env overrides:
-#   GLM_MODEL     (default: glm-4.6)
+#   GLM_MODEL     (default: glm-5.2)
+#   GLM_EFFORT    (default: high; GLM-5.2 supports high/max reasoning effort)
 #   GLM_BASE_URL  (default: https://api.z.ai/api/anthropic;
 #                  bigmodel users: https://open.bigmodel.cn/api/anthropic)
 set -euo pipefail
@@ -61,7 +62,7 @@ if [ -n "$key" ]; then
     ANTHROPIC_BASE_URL="${GLM_BASE_URL:-https://api.z.ai/api/anthropic}" \
     ANTHROPIC_AUTH_TOKEN="$key" \
     ANTHROPIC_API_KEY="$key" \
-    claude -p "$prompt" --model "${GLM_MODEL:-glm-4.6}" "$@"
+    claude -p "$prompt" --model "${GLM_MODEL:-glm-5.2}" --effort "${GLM_EFFORT:-high}" "$@"
 fi
 
 # 3) Not configured.
