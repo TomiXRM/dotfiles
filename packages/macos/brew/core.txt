@@ -2,6 +2,7 @@ ffmpeg
 jq
 ripgrep
 fd
+bat
 fzf
 zoxide
 htop
