@@ -9,6 +9,7 @@ htop
 imagemagick
 
 gh
+ghq
 starship
 zellij
 pixi
