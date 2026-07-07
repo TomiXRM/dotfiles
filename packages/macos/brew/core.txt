@@ -10,7 +10,6 @@ imagemagick
 
 gh
 ghq
-starship
 zellij
 pixi
 terminal-notifier
