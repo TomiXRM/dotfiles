@@ -8,7 +8,6 @@ htop
 imagemagick
 
 gh
-starship
 zellij
 pixi
 terminal-notifier

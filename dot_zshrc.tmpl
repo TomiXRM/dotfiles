@@ -1,14 +1,6 @@
-export ZSH="$HOME/.oh-my-zsh"
-
-ZSH_THEME=""
-
-plugins=(
-  git
-  zsh-completions
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-  uv
-)
+# ===== zshプラグイン (chezmoi externals管理: .chezmoiexternal.toml) =====
+ZSH_PLUGINS="$HOME/.zsh/plugins"
+fpath=("$ZSH_PLUGINS/zsh-completions/src" $fpath)
 
 # ===== 補完設定 =====
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
@@ -24,23 +16,22 @@ if command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
 fi
 
-# ===== oh-my-zsh 初期化 =====
-# NOTE: oh-my-zsh は内部で compinit を実行するため、明示的な compinit は不要
-if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
-  source "$ZSH/oh-my-zsh.sh"
+# ===== compinit =====
+# キャッシュ(.zcompdump)が24時間より古い時だけフルスキャンする
+autoload -Uz compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qNmh+24) ]]; then
+  compinit
 else
-  echo "oh-my-zsh not found at $ZSH; continuing without it." >&2
-  # oh-my-zsh がない場合のみ手動で compinit を実行。キャッシュに保存し24時間だけ有効。
-  autoload -Uz compinit
-  if [[ -n ${ZDOTDIR}/.zcompdump(#qNmh+24) ]]; then
-    compinit
-  else
-    compinit -C
-  fi
+  compinit -C
 fi
 
 # compinit 後でないと compdef は使えないため、ここで定義する
 compdef '_files' source # sourceの補完がファイル・ディレクトリのみになる
+
+# uv補完 (旧oh-my-zsh uvプラグイン相当)
+if command -v uv >/dev/null 2>&1; then
+  eval "$(uv generate-shell-completion zsh)"
+fi
 
 # ===== 秘密の環境変数 (age暗号化、chezmoi管理) =====
 [[ -r "$HOME/.config/ai/secrets.env" ]] && source "$HOME/.config/ai/secrets.env"
@@ -76,6 +67,13 @@ elif [[ -r /usr/share/doc/fzf/examples/key-bindings.zsh ]]; then
   source /usr/share/doc/fzf/examples/key-bindings.zsh
   [[ -r /usr/share/doc/fzf/examples/completion.zsh ]] && source /usr/share/doc/fzf/examples/completion.zsh
 fi
+
+# ===== プラグイン読み込み =====
+[[ -r "$ZSH_PLUGINS/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] && \
+  source "$ZSH_PLUGINS/zsh-autosuggestions/zsh-autosuggestions.zsh"
+# NOTE: syntax-highlighting は他のZLE widget定義（fzf等）より後に読む必要がある
+[[ -r "$ZSH_PLUGINS/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]] && \
+  source "$ZSH_PLUGINS/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # ===== ROS2 設定（chezmoi feature flag管理） =====
 {{- $features := get . "features" | default dict }}
