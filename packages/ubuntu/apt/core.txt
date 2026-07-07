@@ -12,6 +12,7 @@ ffmpeg
 jq
 poppler-utils
 fd-find
+bat
 ripgrep
 fzf
 zoxide
