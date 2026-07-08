@@ -49,7 +49,7 @@ encryption = "age"
 [age]
     useBuiltin = true
     identity = "~/.config/chezmoi/key.txt"
-    recipient = "age1..." # 公開鍵。実値は docs/architecture.md の「秘密情報」
+    recipient = "age1ythyyyga4jhspusm7r6pjnqnm6jh2v2x4ez86tu67dm3ngyghgrs6p5jtm" # 公開鍵（秘密ではない）
 
 [data.features]
 ros2 = false
