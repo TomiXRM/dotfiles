@@ -16,6 +16,9 @@ if command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
 fi
 
+# ===== rustup/cargo (miseでは管理しない、rustup一本化) =====
+[[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+
 # ===== compinit =====
 # キャッシュ(.zcompdump)が24時間より古い時だけフルスキャンする
 autoload -Uz compinit
