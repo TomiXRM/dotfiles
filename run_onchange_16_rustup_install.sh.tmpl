@@ -1,0 +1,33 @@
+{{- if or (eq .chezmoi.os "linux") (eq .chezmoi.os "darwin") -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_16_rustup_install] Started at $(date) ==="
+
+if command -v rustup >/dev/null 2>&1; then
+  echo "rustup already installed: $(rustup --version)"
+  exit 0
+fi
+
+fetch_url="https://sh.rustup.rs"
+
+fetch_installer() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$fetch_url"
+    return
+  fi
+
+  if command -v wget >/dev/null 2>&1; then
+    wget -qO- "$fetch_url"
+    return
+  fi
+
+  echo "Neither curl nor wget found." >&2
+  return 1
+}
+
+echo "rustup not found; installing"
+fetch_installer | sh -s -- -y --default-toolchain stable
+
+echo "rustup is ready: $("${HOME}/.cargo/bin/rustup" --version)"
+{{- end -}}

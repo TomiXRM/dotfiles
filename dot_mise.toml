@@ -18,8 +18,7 @@ claude = "latest"
 # Agent multiplexer — tmux的にエージェントを並行管理し状態(done/blocked)を検知する端末
 "github:ogulcancelik/herdr" = "latest"
 
-# Rust toolchain
-rust = "latest"
+# Rust toolchain管理はrustupに一本化(mise未使用)。 `rustup update` で最新化する
 "github:dandavison/delta" = "latest"
 
 # Terminal file manager
