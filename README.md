@@ -57,8 +57,8 @@ kicad = false
 embedded = true
 
 [data.embedded]
-armNoneEabiVersion = "15.2.1-1.1.1"
-# armNoneEabiVersion = "14.2.1-1.1"
+# armNoneEabiVersion = "15.2.1-1.1.1"
+armNoneEabiVersion = "14.2.1-1.1.1"
 
 ```
 
