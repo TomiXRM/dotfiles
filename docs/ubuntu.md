@@ -143,6 +143,7 @@ flowchart TB
 
 ## 配置される設定ファイル
 
+- [config.tmpl](../private_dot_config/ghostty/config.tmpl) (Ghostty。macOS と共通で、keybind だけ OS 分岐する)
 - [dot_xinputrc](../dot_xinputrc)
 - [private_profile](../private_dot_config/private_fcitx5/private_profile)
 - [private_config](../private_dot_config/private_fcitx5/private_config)
