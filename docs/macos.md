@@ -30,6 +30,8 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
   - `font-jetbrains-mono-nerd-font`
   - `font-biz-udgothic`
 - フォント install は `chezmoi apply` 側の cask pipeline に寄せる
+- Ubuntu 側は同じ2ファミリを [run_onchange_26_ubuntu_fonts.sh.tmpl](../run_onchange_26_ubuntu_fonts.sh.tmpl) で揃える
+  (詳細は [docs/ubuntu.md](ubuntu.md) の「4.5. フォント」)
 
 ## 実機検証でわかったこと
 

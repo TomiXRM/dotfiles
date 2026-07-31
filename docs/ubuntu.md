@@ -118,6 +118,29 @@ flowchart TB
 - インストール済みであれば再インストールをスキップする
 - `--classic` confinement が必要なパッケージは自動的にフォールバックする
 
+### 4.5. フォント
+
+管理対象:
+
+- [run_onchange_26_ubuntu_fonts.sh.tmpl](../run_onchange_26_ubuntu_fonts.sh.tmpl)
+- [packages/ubuntu/apt/fonts.txt](../packages/ubuntu/apt/fonts.txt)
+
+役割:
+
+- Ghostty の設定が要求するフォントファミリを Ubuntu 側でも揃える
+- `BIZ UDGothic` を apt (`fonts-morisawa-bizud-gothic`) で入れる
+- `JetBrainsMono Nerd Font Mono` を Nerd Fonts の upstream release から `~/.local/share/fonts` に入れる
+
+補足:
+
+- apt の `fonts-jetbrains-mono` は Nerd Font パッチ版ではなく、ファミリ名が `JetBrains Mono` になるため使わない
+- Nerd Fonts の archive は version 固定 + SHA-256 検証で入れ、`.installed-version` を見て再ダウンロードを避ける
+- version を上げるときは release の `SHA-256.txt` からチェックサムも一緒に更新する
+- フォントを入れた時だけ `fc-cache -f` を走らせる
+- 最後に `fc-list` で Ghostty が要求するファミリ名が解決できるかを検証し、駄目なら警告を出す
+  （Ghostty は解決できない `font-family` を黙って捨てて次の候補にフォールバックするため、
+  パッケージ名とファミリ名の取り違えに気付きにくい）
+
 ### 5. Input stack
 
 管理対象:
