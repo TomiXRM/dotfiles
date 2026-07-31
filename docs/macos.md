@@ -15,17 +15,23 @@ macOS 対応は repo 内に構造があり、2026年3月時点で主要フロー
 - `features.ros2` は macOS では無視する
 - `features.embedded = true` の時、xPack の `arm-none-eabi-gcc` と STM32CubeProgrammer の PATH を shell に追加する
 - `arm-none-eabi-gcc` の version は machine-local data の `[data.embedded] armNoneEabiVersion` で切り替える
-- Ghostty は macOS 専用の設定として管理し、`~/.config/ghostty/config` に配置する
+- Ghostty の設定は macOS / Linux 共通で `~/.config/ghostty/config` に配置し、keybind だけ OS 分岐する
 
 ## Ghostty 用フォント方針
 
-- Ghostty の設定では `JetBrains Mono` と `BIZ UDGothic` を使う
+- Ghostty の設定では `JetBrainsMono Nerd Font Mono` と `BIZ UDGothic` を使う
+- 指定するのは cask 名ではなく**フォントファミリ名**である点に注意する。
+  cask `font-jetbrains-mono-nerd-font` が供給するファミリ名は `JetBrains Mono` ではなく
+  `JetBrainsMono Nerd Font Mono` で、取り違えると Ghostty は解決できない `font-family` を
+  黙って捨て、次の候補 (`BIZ UDGothic`) が英数字まで担当してしまう
+- 確認は `ghostty +list-fonts` と `ghostty +show-face --string="Hello 日本語"` で行う
 - 再現性のため、macOS では [packages/macos/cask/fonts.txt](../packages/macos/cask/fonts.txt) からフォント cask を入れる
 - 現在の対象:
   - `font-jetbrains-mono-nerd-font`
   - `font-biz-udgothic`
-- `~/.config/ghostty/config` が編集対象で、`ghostty` 自体は Linux では `.chezmoiignore.tmpl` で無視する
 - フォント install は `chezmoi apply` 側の cask pipeline に寄せる
+- Ubuntu 側は同じ2ファミリを [run_onchange_26_ubuntu_fonts.sh.tmpl](../run_onchange_26_ubuntu_fonts.sh.tmpl) で揃える
+  (詳細は [docs/ubuntu.md](ubuntu.md) の「4.5. フォント」)
 
 ## 実機検証でわかったこと
 

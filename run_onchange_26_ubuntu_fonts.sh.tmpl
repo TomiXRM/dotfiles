@@ -1,0 +1,155 @@
+{{- if eq .chezmoi.os "linux" -}}
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ~/.config/ghostty/config が要求するフォントファミリを Ubuntu 側でも揃える。
+#   - "BIZ UDGothic"              -> apt (packages/ubuntu/apt/fonts.txt)
+#   - "JetBrainsMono Nerd Font Mono" -> Nerd Fonts の upstream release
+#     (apt の fonts-jetbrains-mono は Nerd Font パッチ版ではなく、
+#      ファミリ名が "JetBrains Mono" になるため ghostty の指定と一致しない)
+# macOS 側は packages/macos/cask/fonts.txt の cask が同じ2ファミリを供給する。
+
+echo "=== [run_onchange_26_ubuntu_fonts] Started at $(date) ==="
+
+if [ ! -r /etc/os-release ]; then
+  echo "os-release not found; skipping Ubuntu font sync."
+  exit 0
+fi
+
+. /etc/os-release
+if [ "${ID:-}" != "ubuntu" ]; then
+  echo "Not Ubuntu (ID=${ID:-unknown}); skipping Ubuntu font sync."
+  exit 0
+fi
+
+fonts_changed=false
+
+# --- apt で供給されるフォント -------------------------------------------
+apt_font_packages=(
+{{- range (splitList "\n" (include "packages/ubuntu/apt/fonts.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+missing_apt_font_packages=()
+for pkg in "${apt_font_packages[@]}"; do
+  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+    missing_apt_font_packages+=("$pkg")
+  fi
+done
+
+if [ "${#missing_apt_font_packages[@]}" -gt 0 ]; then
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get not found; skipping Ubuntu apt fonts."
+  else
+    sudo apt-get update
+    echo "Installing missing Ubuntu fonts (${#missing_apt_font_packages[@]}): ${missing_apt_font_packages[*]}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_apt_font_packages[@]}"
+    fonts_changed=true
+  fi
+else
+  echo "Ubuntu apt fonts already installed."
+fi
+
+# --- Nerd Fonts の upstream release --------------------------------------
+# バージョンとチェックサムを上げるときは
+# https://github.com/ryanoasis/nerd-fonts/releases/download/<tag>/SHA-256.txt を参照。
+nerd_fonts_version="v3.4.0"
+nerd_font_archive="JetBrainsMono.zip"
+nerd_font_sha256="76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c"
+
+font_root="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+font_dir="$font_root/JetBrainsMonoNerdFont"
+version_stamp="$font_dir/.installed-version"
+
+if [ -f "$version_stamp" ] && [ "$(cat "$version_stamp")" = "$nerd_fonts_version" ]; then
+  echo "JetBrainsMono Nerd Font $nerd_fonts_version already installed."
+else
+  missing_tools=()
+  for tool in curl unzip sha256sum; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      missing_tools+=("$tool")
+    fi
+  done
+
+  # sha256sum は coreutils 由来なので、不足しうるのは実質 curl / unzip のみ。
+  install_tools=()
+  for tool in "${missing_tools[@]}"; do
+    case "$tool" in
+      curl|unzip) install_tools+=("$tool") ;;
+    esac
+  done
+
+  if [ "${#install_tools[@]}" -gt 0 ]; then
+    if ! command -v apt-get >/dev/null 2>&1; then
+      echo "Missing tools and no apt-get: ${install_tools[*]}; skipping Nerd Font install." >&2
+      install_tools=()
+    else
+      echo "Installing tools required for the Nerd Font download: ${install_tools[*]}"
+      sudo apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${install_tools[@]}"
+      hash -r
+    fi
+  fi
+
+  if ! command -v curl >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+    echo "curl or unzip unavailable; skipping JetBrainsMono Nerd Font install." >&2
+  else
+    tmp_dir="$(mktemp -d)"
+    trap 'rm -rf "$tmp_dir"' EXIT
+
+    archive_url="https://github.com/ryanoasis/nerd-fonts/releases/download/${nerd_fonts_version}/${nerd_font_archive}"
+    echo "Downloading $archive_url"
+    curl -fsSL --retry 3 --retry-delay 2 -o "$tmp_dir/$nerd_font_archive" "$archive_url"
+
+    echo "Verifying checksum"
+    echo "${nerd_font_sha256}  ${tmp_dir}/${nerd_font_archive}" | sha256sum -c -
+
+    # バージョン混在を避けるため、いったん撤去してから展開しなおす。
+    rm -rf "$font_dir"
+    mkdir -p "$font_dir"
+    unzip -q -o "$tmp_dir/$nerd_font_archive" '*.ttf' -d "$font_dir"
+    printf '%s\n' "$nerd_fonts_version" >"$version_stamp"
+
+    echo "Installed JetBrainsMono Nerd Font $nerd_fonts_version to $font_dir"
+    fonts_changed=true
+
+    rm -rf "$tmp_dir"
+    trap - EXIT
+  fi
+fi
+
+# --- フォントキャッシュ更新と検証 ----------------------------------------
+if [ "$fonts_changed" = true ]; then
+  if command -v fc-cache >/dev/null 2>&1; then
+    echo "Rebuilding font cache"
+    fc-cache -f "$font_root" >/dev/null
+  else
+    echo "fc-cache not found; install fontconfig if fonts do not appear." >&2
+  fi
+fi
+
+# ghostty の config が参照するファミリ名が実際に解決できるかを確かめる。
+# cask/apt のパッケージ名とファミリ名は一致しないため、ここで取り違えを検出する。
+if command -v fc-list >/dev/null 2>&1; then
+  missing_families=()
+  for family in "JetBrainsMono Nerd Font Mono" "BIZ UDGothic"; do
+    if fc-list : family | grep -qF "$family"; then
+      echo "Font family available: $family"
+    else
+      missing_families+=("$family")
+    fi
+  done
+
+  if [ "${#missing_families[@]}" -gt 0 ]; then
+    echo "WARNING: ghostty expects these font families but fontconfig cannot see them:" >&2
+    printf '  - %s\n' "${missing_families[@]}" >&2
+    echo "ghostty falls back silently when a font-family does not resolve; check ~/.config/ghostty/config." >&2
+  fi
+else
+  echo "fc-list not found; skipping font family verification."
+fi
+{{- end -}}
