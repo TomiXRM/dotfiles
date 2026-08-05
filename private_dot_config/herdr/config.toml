@@ -1,0 +1,9 @@
+onboarding = false
+
+[update]
+channel = "preview"
+
+[keys]
+split_vertical = "prefix+r"   # 右にpaneを作る (ctrl+b r)
+split_horizontal = "prefix+d" # 下にpaneを作る (ctrl+b d)
+resize_mode = "prefix+shift+r" # デフォルトのprefix+rをsplitに譲るため退避
