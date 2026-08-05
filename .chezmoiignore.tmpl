@@ -1,25 +1,25 @@
-/AGENTS.md
-/Makefile
-/README.md
-/.github
-/.serena
-/.vscode
-/assets
-/bootstrap
-/docs
-/packages
-/tmp
+AGENTS.md
+Makefile
+README.md
+.github
+.serena
+.vscode
+assets
+bootstrap
+docs
+packages
+tmp
 
 {{- if eq .chezmoi.os "darwin" }}
-/.xinputrc
-/.config/autostart/org.fcitx.Fcitx5.desktop
-/.config/fcitx5/**
-/.config/toshy/**
-/.local/share/gnome-shell/**
+.xinputrc
+.config/autostart/org.fcitx.Fcitx5.desktop
+.config/fcitx5/**
+.config/toshy/**
+.local/share/gnome-shell/**
 {{- end }}
 
-/.config/fcitx5/conf/cached_layouts
+.config/fcitx5/conf/cached_layouts
 
 {{- if eq .chezmoi.os "linux" }}
-/.config/karabiner/**
+.config/karabiner/**
 {{- end }}
