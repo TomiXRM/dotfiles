@@ -9,7 +9,8 @@ uv = "latest"
 node = "lts"
 
 # Agentic coding CLIs.
-codex = "latest"
+# codexはnpm配布を使う (github release backendはcodex-code-mode-hostを同梱しない)
+"npm:@openai/codex" = "latest"
 claude = "latest"
 
 # Cosense (Scrapbox) CLI — 知識ベース連携 (Node >=24 必須)
