@@ -28,3 +28,10 @@
   clone.args = ["--depth", "1"]
   pull.args = ["--ff-only"]
   refreshPeriod = "168h"
+
+# herdr skill: 単一ファイルなので36MBのリポジトリをcloneせず、raw fileだけ取得する。
+# codex側は dot_codex/skills/symlink_herdr.tmpl から ~/.claude/skills/herdr を参照。
+[".claude/skills/herdr/SKILL.md"]
+  type = "file"
+  url = "https://raw.githubusercontent.com/herdrdev/herdr/master/skills/herdr/SKILL.md"
+  refreshPeriod = "168h"
