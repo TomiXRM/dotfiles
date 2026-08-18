@@ -13,8 +13,9 @@
 # プラグインの検索・更新・有効化をherdr内のpopupから行う (prefix割当は各自)
 speardragon/herdr-plugin-manager
 
-# Agentの変更をdiff付きで見るread-onlyファイルビューア (Rust/要ビルド)
-smarzban/herdr-file-viewer
+# Agentのdiffをレビューして返せるサイドバー + PR/checks/コメント表示
+# (要: git, gh。プリビルドバイナリ配布でRustツールチェーン不要)
+persiyanov/herdr-reviewr
 
 # 実物のChromiumをpaneに描画しCDPで操作する (要: bun, Chrome, Kitty graphics端末)
 ogulcancelik/herdr-browser
