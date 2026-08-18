@@ -28,6 +28,9 @@ yazi = "latest"
 # Shell prompt
 starship = "latest"
 
+# JS runtime — herdr-browser プラグインが必要とする
+bun = "latest"
+
 # Family tree tool
 "github:trasta298/keifu" = "latest"
 

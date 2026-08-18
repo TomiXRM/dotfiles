@@ -1,0 +1,20 @@
+# herdrプラグイン: run_onchange_36_herdr_plugins が導入する
+#
+# 形式: <owner/repo>[/subdir] [ref]
+#   ref を書くとそのリビジョンに固定される。ref を書き換えると
+#   run_onchange が再実行され、そのバージョンへ入れ替わる。
+#
+# 更新: herdrに `plugin update` が無いため再インストールが更新手段。
+#   HERDR_PLUGINS_REFRESH=1 chezmoi apply  で一覧を全て入れ直す。
+#
+# 注意: install時に各リポジトリのbuildコマンドが実行される。信頼できる
+#   リポジトリだけを列挙すること。
+
+# プラグインの検索・更新・有効化をherdr内のpopupから行う (prefix割当は各自)
+speardragon/herdr-plugin-manager
+
+# Agentの変更をdiff付きで見るread-onlyファイルビューア (Rust/要ビルド)
+smarzban/herdr-file-viewer
+
+# 実物のChromiumをpaneに描画しCDPで操作する (要: bun, Chrome, Kitty graphics端末)
+ogulcancelik/herdr-browser

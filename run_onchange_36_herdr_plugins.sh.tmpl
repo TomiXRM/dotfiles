@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_36_herdr_plugins] Started at $(date) ==="
+
+if ! command -v herdr >/dev/null 2>&1; then
+  echo "herdr not found; skipping plugin sync."
+  exit 0
+fi
+
+plugin_specs=(
+{{- range (splitList "\n" (include "packages/herdr-plugins.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#plugin_specs[@]}" -eq 0 ]; then
+  echo "No herdr plugins configured."
+  exit 0
+fi
+
+# herdr serverが動いていないとsocket APIを叩けない
+if ! herdr plugin list --json >/dev/null 2>&1; then
+  echo "herdr server is not reachable; skipping plugin sync."
+  echo "Start herdr and re-run: chezmoi apply"
+  exit 0
+fi
+
+# 導入済みを owner/repo で取得（herdrは plugin update を持たないため、
+# 更新は再インストール。HERDR_PLUGINS_REFRESH=1 で全件入れ直す）
+installed="$(herdr plugin list --json 2>/dev/null | python3 -c "
+import json, sys
+try:
+    for p in json.load(sys.stdin)['result']['plugins']:
+        s = p.get('source') or {}
+        if s.get('owner') and s.get('repo'):
+            print(f\"{s['owner']}/{s['repo']}\")
+except Exception:
+    pass
+" || true)"
+
+refresh="${HERDR_PLUGINS_REFRESH:-0}"
+
+for spec in "${plugin_specs[@]}"; do
+  read -r source ref <<<"$spec"
+  [ -n "$source" ] || continue
+
+  # owner/repo/subdir 形式でも owner/repo で照合する
+  repo="$(printf '%s\n' "$source" | cut -d/ -f1,2)"
+
+  if [ "$refresh" != "1" ] && printf '%s\n' "$installed" | grep -Fxq "$repo"; then
+    echo "$source already installed; skipping."
+    continue
+  fi
+
+  echo "Installing herdr plugin: $source${ref:+ (ref: $ref)}"
+  if [ -n "$ref" ]; then
+    herdr plugin install "$source" --ref "$ref" --yes
+  else
+    herdr plugin install "$source" --yes
+  fi
+done
+
+echo "Refresh all plugins with: HERDR_PLUGINS_REFRESH=1 chezmoi apply"
