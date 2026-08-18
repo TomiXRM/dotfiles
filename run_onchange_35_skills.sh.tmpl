@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== [run_onchange_35_skills] Started at $(date) ==="
+
+if ! command -v npx >/dev/null 2>&1; then
+  echo "npx not found; skipping skill sync (node is managed by mise)."
+  exit 0
+fi
+
+skill_specs=(
+{{- range (splitList "\n" (include "packages/skills.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#skill_specs[@]}" -eq 0 ]; then
+  echo "No third-party skills configured."
+  exit 0
+fi
+
+# 既に入っているものは skills CLI の lockfile で判定して飛ばす
+installed="$(python3 - <<'PY' 2>/dev/null || true
+import json, os
+try:
+    with open(os.path.expanduser("~/.agents/.skill-lock.json")) as f:
+        print("\n".join(json.load(f).get("skills", {})))
+except Exception:
+    pass
+PY
+)"
+
+for spec in "${skill_specs[@]}"; do
+  read -r repo skill <<<"$spec"
+  if [ -z "$repo" ] || [ -z "$skill" ]; then
+    echo "Skipping malformed entry: $spec" >&2
+    continue
+  fi
+  if printf '%s\n' "$installed" | grep -Fxq "$skill"; then
+    echo "$skill already installed; skipping."
+    continue
+  fi
+  echo "Installing skill: $skill ($repo)"
+  npx -y skills@latest add "$repo" --skill "$skill" -g -y
+done
+
+echo "Update installed skills with: npx skills update -g"
