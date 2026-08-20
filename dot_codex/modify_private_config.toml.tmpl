@@ -24,16 +24,32 @@ python3 - "$tmp" <<'PYEOF'
 import re, sys
 
 # --- 管理対象（ここが唯一の真実） ---
-TOP = [
-    ('approvals_reviewer',  '"auto_review"'),
-    ('default_permissions', '":workspace"'),
-    ('approval_policy',     '"on-request"'),
-]
 FEATURES = [
     ('hooks',               'true'),
     ('js_repl',             'false'),
     ('collaboration_modes', 'true'),   # Plan Mode (Shift+Tab)
     ('collab',              'true'),
+]
+# 権限プロファイル。丸ごと chezmoi のものなので、既存を消して毎回書き直す。
+# :workspace（ワークスペース書き込みのみ・ネットワーク遮断）を土台に、
+# gh / git が使うホストだけ開ける。これが無いと gh のたびに承認を求められる。
+PROFILE = "workspace-net"
+PROFILE_BLOCK = f'''[permissions.{PROFILE}]
+extends = ":workspace"
+
+[permissions.{PROFILE}.network]
+enabled = true
+mode = "limited"
+
+[permissions.{PROFILE}.network.domains]
+"github.com" = "allow"
+"api.github.com" = "allow"
+"objects.githubusercontent.com" = "allow"
+"codeload.github.com" = "allow"'''
+TOP = [
+    ('approvals_reviewer',  '"auto_review"'),
+    ('default_permissions', f'"{PROFILE}"'),
+    ('approval_policy',     '"on-request"'),
 ]
 BANNER = "# ↓ chezmoi 管理 (dot_codex/modify_private_config.toml.tmpl)"
 
@@ -84,6 +100,21 @@ else:
         body.pop()
     body += [f"{k} = {v}" for k, v in FEATURES if k not in seen]
     rest = rest[:fi + 1] + body + [""] + rest[end:]
+
+# 5) 権限プロファイルは丸ごと管理下。既存の同名セクションを落として書き直す。
+def drop_sections(lines, prefixes):
+    kept, skip = [], False
+    for l in lines:
+        if l.lstrip().startswith("["):
+            skip = any(l.strip().startswith(pre) for pre in prefixes)
+        if not skip:
+            kept.append(l)
+    return kept
+
+rest = drop_sections(rest, [f"[permissions.{PROFILE}]", f"[permissions.{PROFILE}."])
+while rest and not rest[-1].strip():
+    rest.pop()
+rest += [""] + PROFILE_BLOCK.splitlines()
 
 sys.stdout.write("\n".join(preamble + rest).rstrip("\n") + "\n")
 PYEOF
