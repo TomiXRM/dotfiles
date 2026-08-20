@@ -4,8 +4,8 @@ Copy-paste recipes for dispatching each worker uniformly. Read this when you are
 actually about to fan out. The Conductor (the running Claude) writes each worker's
 focused prompt, runs these via Bash, and reads the captured output files.
 
-All artifacts go in a throwaway run dir so the repo stays clean. `$SKILL` must
-point at this skill's own directory (the `glm.sh` adapter lives under it):
+All artifacts go in a throwaway run dir so the repo stays clean. `$SKILL` points at
+this skill's own directory:
 
 ```bash
 SKILL="${SKILL:-$HOME/.claude/skills/cross-model-orchestration}"  # this skill's dir
@@ -19,25 +19,116 @@ echo "SKILL=$SKILL  RUN=$RUN  REPO=$REPO"
 # every later step starts with:  source "$RUN/env.sh"
 ```
 
-Probe the pool once and degrade gracefully (missing GLM = still codex+claude):
+Probe the pool and the transport once:
 
 ```bash
 command -v codex >/dev/null && echo "codex: ok"
-command -v claude >/dev/null && echo "claude: ok"
-# GLM: `--check` reports config without invoking any model (exit 3 = unconfigured).
-"$SKILL/scripts/glm.sh" --check || echo "  -> drop glm from the pool, note reduced diversity"
+# Transport: herdr is the default so a human can watch every worker in a pane.
+if [ "${HERDR_ENV:-}" = 1 ]; then
+  echo "transport: herdr (pane-visible)"
+  printf 'conductor pane: %s\n' "$HERDR_PANE_ID"
+else
+  echo "transport: codex exec (FALLBACK - the human cannot watch this; say so)"
+fi
 ```
 
-> Diversity note: the two genuinely **cross-family** workers are `codex` (GPT) and
-> `glm` (GLM), dispatched as **CLI legs via Bash**. `claude` as a worker is the *same
-> family* as the Conductor — the recursive/self leg (test-time scaling); under Claude
-> Code dispatch it as a **native SubAgent** (Agent tool), not `claude -p` (see the
-> claude section). A different tier (opus vs sonnet) adds a little spread, but this is
-> not where the diversity payoff lives — keep the budget on codex + glm.
+The pool is only two families (codex + claude). **If codex is unavailable there is no
+cross-family verification left** — that is not graceful degradation, it is a different
+(much weaker) exercise. Say so instead of silently continuing with Claude alone.
+
+> Diversity note: the only genuinely **cross-family** worker is `codex` (GPT),
+> dispatched into a **herdr pane** so the human sees it work. `claude` as a worker is
+> the *same family* as the Conductor — the recursive/self leg (test-time scaling);
+> dispatch it as a **native SubAgent** (Agent tool), not `claude -p` (see the claude
+> section). A different tier (opus vs sonnet) adds a little spread, but this is not
+> where the diversity payoff lives — keep the budget on codex.
 
 ---
 
-## codex (GPT family)
+## codex (GPT family) — herdr transport (DEFAULT)
+
+Run codex in a **neighbouring herdr pane** and push work into it. The human watches
+the pane live and can interrupt; `codex exec` hides all of that. Use this whenever
+`HERDR_ENV=1`.
+
+### 1. Get a codex pane (reuse before creating)
+
+```bash
+source "$RUN/env.sh"
+# Reuse a codex agent that is already idle, else make one next to the Conductor.
+W="$(herdr agent list 2>/dev/null | python3 -c '
+import json,sys
+for a in json.load(sys.stdin)["result"]["agents"]:
+    if a.get("agent")=="codex" and a.get("agent_status") in ("idle","done"):
+        print(a["pane_id"]); break
+' || true)"
+
+if [ -z "$W" ]; then
+  PANE="$(herdr pane split --current --direction right --cwd "$REPO" --no-focus \
+          | python3 -c 'import json,sys;print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')"
+  herdr agent start cmo-codex --kind codex --pane "$PANE"   # returns once codex is ready
+  W=cmo-codex
+fi
+echo "codex worker = $W"
+```
+
+`--no-focus` keeps the human's cursor where it was. In **deep** mode split with
+`--cwd "$RUN/wt-codex"` instead, so the pane already sits in its own worktree.
+
+### 2. Build the CMO envelope (this is what makes the injection visible)
+
+```bash
+REPLY="$RUN/plan-codex.md"
+{
+  printf '[CMO/herdr] from=claude@%s run=%s role=thinker reply=%s\n\n' \
+         "$HERDR_PANE_ID" "$(basename "$RUN")" "$REPLY"
+  cat "$RUN/prompt-codex.txt"
+  cat <<'RULES'
+
+--- CMO 応答規約 ---
+1. 最終回答は必ず reply= の絶対パスに書く（pane出力は代替スクリーンで流れると
+   Conductor から読めない。ファイルが唯一の確実な返路）
+2. 書き終えたら本文には "CMO-DONE <reply>" の1行だけ返す
+3. 他ワーカーの案は意図的に渡していない。独立に判断すること
+4. role=verifier のときは reply に verdict JSON のみを書く
+5. 判断に迷ったら埋めずに「不明点」として reply に列挙する
+RULES
+} > "$RUN/envelope-codex.txt"
+```
+
+### 3. Inject and wait
+
+```bash
+herdr agent prompt "$W" "$(cat "$RUN/envelope-codex.txt")" --wait --timeout 600000
+herdr agent get "$W"          # settled as idle/done ... or blocked?
+test -s "$REPLY" && echo "reply captured: $REPLY"
+```
+
+> **`--wait` の実際の意味（実測済み）**
+> - 待つのは *ライフサイクル状態*（idle / done / blocked）であって「このターンの完了」ではない。
+>   既に working の agent に投げると、無関係な前のターンの完了で解けることがある。
+> - `blocked` で返ることがある = 承認待ちで止まった、であって完了ではない。返ってきたら
+>   必ず `agent get` を見て、`blocked` なら `agent read` で何を聞かれたか確認する。
+> - 非working から投げて5秒以内に状態変化が観測できないと `agent_prompt_stalled` を返す
+>   （無限待機はしない）。
+> - **長時間タスクはブロッキングで受けきれない。** Conductor が Claude Code なら Bash の
+>   タイムアウト上限が10分。それを超えるなら `--wait` を諦め、reply ファイルの出現を
+>   ポーリングするか socket API の `events.wait`（`pane_agent_status_changed` 専用）を使う。
+> - `agent read` は代替スクリーンを遡れないので、**長い回答の回収に使ってはいけない**。
+>   reply ファイルが正。`agent read` はデバッグと `blocked` 時の確認用。
+
+### 4. Iterate / clean up
+
+同じ pane に続けて `agent prompt` すれば codex 側の文脈が残る（ラウンド2以降）。完全に
+ブラインドな再挑戦がほしいときだけ pane を作り直す。後始末では **自分が作った pane だけ**
+閉じる（`herdr pane close "$PANE"`）。人間の pane や既存 agent には触らない。
+
+---
+
+## codex — `codex exec` fallback (herdr の外にいるときだけ)
+
+`HERDR_ENV` が立っていない場合のみ。**人間がワーカーの作業を見られない**ので、この経路を
+使うときはユーザにそう伝えること。
 
 **Plan / reason (read-only — cannot touch files):**
 
@@ -57,7 +148,7 @@ PROMPT
 to force a JSON shape (good for verifier verdicts — see below). The heredoc above
 is interchangeable with supplying the prompt from a file — `- < "$RUN/prompt-codex.txt"`
 — which matches the framing step where the Conductor writes one prompt file per worker.
-Use the file form throughout for consistency with the claude/glm adapters.
+Use the file form throughout for consistency with the claude adapter.
 
 **Implement (writes files — always inside an isolated worktree):**
 
@@ -97,7 +188,7 @@ run read-only-yet-able-to-test as a verifier.
 > spec only*, never the Conductor's current hypothesis or the other workers' outputs;
 > the moment you pre-load your thinking, it stops being an independent vote.
 > **Diversity reminder still holds:** a Claude SubAgent is the *self / recursive* leg,
-> NOT a cross-family worker. The diversity payoff lives in codex + glm — don't spawn
+> NOT a cross-family worker. The diversity payoff lives in codex — don't spawn
 > three Claude subs and call it cross-model. SubAgents are cheap to spawn; spend the
 > budget on the cross-family legs first.
 
@@ -126,7 +217,7 @@ they run concurrently). Set `model:"sonnet"` when the Conductor is opus, for spr
   > breaking cross-family capture/verify. A Conductor-owned worktree keeps every
   > candidate uniform. (`isolation:"worktree"` is fine in *light* mode, where nothing
   > external inspects the tree.)
-- **Verify (cross-family, Claude verifying codex/glm work):**
+- **Verify (cross-family, Claude verifying codex work):**
   `Agent(subagent_type:"Explore", prompt:"review the diff in $RUN/wt-<cand>, run
   <TEST_CMD> there, do NOT edit, output ONLY the verdict JSON {pass,tests_run,
   tests_passed,issues[],summary}")`. Final message = the verdict; parse with jq.
@@ -138,10 +229,10 @@ they run concurrently). Set `model:"sonnet"` when the Conductor is opus, for spr
 > given and runs tests with no permission prompt; an `Explore` sub reports *"Edit tools
 > are unavailable to me,"* runs the suite, and returns parseable verdict JSON.
 
-### Transport B — `claude -p` (fallback; also the GLM transport)
+### Transport B — `claude -p` (fallback)
 
-Use when the Conductor is **not** Claude Code, when you want a fully separate OS
-process, or for GLM (`glm.sh` runs the claude binary). Same family, same blindness.
+Use when the Conductor is **not** Claude Code, or when you want a fully separate OS
+process. Same family, same blindness.
 
 **Plan (read-only via plan mode):**
 
@@ -180,37 +271,6 @@ plans/diffs. Prefer a *different* tier than the Conductor — set
 
 ---
 
-## glm (GLM family) — via `scripts/glm.sh`
-
-The adapter normalizes GLM to the same stdin->stdout shape. It uses your `GLM_CMD`
-(e.g. ZCode) if set, else GLM's Anthropic-compatible endpoint via the claude CLI
-with `GLM_API_KEY`. See the script header for env vars.
-
-```bash
-GLM="$SKILL/scripts/glm.sh"
-
-# Plan (read-only):
-( cd "$REPO" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" --permission-mode plan < /dev/null ) \
-    > "$RUN/plan-glm.md" || echo "glm unavailable — continuing without it"
-
-# Implement (in a worktree):
-( cd "$WT" && "$GLM" "$(cat "$RUN/prompt-glm.txt")" \
-    --permission-mode acceptEdits --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git:*)' \
-    < /dev/null ) > "$RUN/impl-glm.md"
-```
-
-> Via the API-key path `glm.sh` runs the **claude binary** pointed at Z.ai, so the
-> same two gotchas apply: redirect `< /dev/null`, and scope `--allowedTools` (extra
-> flags are forwarded to claude) instead of relying on `acceptEdits` to run tests.
-
-> Degradation: decide the worker set up front from the pool probe. If `glm.sh --check`
-> failed, **do not** create a glm worktree or issue glm calls — drop glm from every
-> loop below and proceed with the remaining families. Same for any worker whose CLI
-> is absent. Build the loop list dynamically, e.g. `WORKERS=(codex claude)` when glm
-> is out.
-
----
-
 ## Isolated worktrees (deep mode — parallel implementers can't conflict)
 
 Workers leave their edits **uncommitted** in their worktree, so adoption is
@@ -220,7 +280,7 @@ cleanup would then destroy the only copy of the work. Capture the diff first,
 apply it, verify, and only then clean up.
 
 > **Dispatch is hybrid, capture is uniform.** The Conductor creates one worktree per
-> worker (loop below). The codex/glm legs implement via Bash (`-C "$RUN/wt-$w"`); the
+> worker (loop below). The codex leg implements in its herdr pane (cwd = `$RUN/wt-codex`); the
 > claude leg implements via a **native `general-purpose` SubAgent told to work in
 > `$RUN/wt-claude`** (Transport A, not `claude -p`). Either way the edits land in the
 > Conductor-owned worktree, so the diff capture, cross-verify, and adoption steps are
@@ -228,7 +288,7 @@ apply it, verify, and only then clean up.
 
 ```bash
 SLUG="taskslug"
-WORKERS=(codex claude)        # built from the pool probe; add glm only if --check passed
+WORKERS=(codex claude)        # the whole pool: one cross-family leg + the self leg
 
 # 1) One detached worktree per worker (no branch needed for patch-based adoption).
 for w in "${WORKERS[@]}"; do
@@ -273,7 +333,8 @@ rm -rf "$RUN"
 ## Verifier verdict — small JSON for parseable pass/fail
 
 Ask the verifier (a **different family** than the implementer) to end with this.
-With codex you can enforce it via `--output-schema`; with claude/glm just instruct it.
+With `codex exec` you can enforce it via `--output-schema`; over the herdr transport and
+with claude SubAgents, instruct it in the prompt (envelope `role=verifier`).
 
 ```json
 {
@@ -312,17 +373,17 @@ Agent(subagent_type:"Explore", model:"sonnet", prompt:
 # the SubAgent's final message IS the verdict JSON -> write to $RUN/verdict-<cand>.json, parse with jq
 ```
 
-The CLI examples below (codex schema-enforced; `claude -p`/glm as fallback transport)
-verify GLM's work, which lives in `$RUN/wt-glm`:
+The examples below verify the **codex** candidate, which lives in `$RUN/wt-codex`
+(so the verifier must be a Claude leg — different family from the implementer):
 
 ```bash
 TEST_CMD="pytest -q"   # the repo's real test command
-WT="$RUN/wt-glm"       # the worktree holding the candidate edits under test
+WT="$RUN/wt-codex"     # the worktree holding the candidate edits under test
 
 # --- codex as verifier (schema-enforced). Reviews in-place; runs tests on the candidate tree. ---
 codex exec --skip-git-repo-check -s workspace-write -C "$WT" \
   --output-schema "$SKILL/references/verdict.schema.json" \
-  -o "$RUN/verdict-glm.json" \
+  -o "$RUN/verdict-codex.json" \
   - <<PROMPT
 You are in a git worktree that ALREADY contains a candidate change (see \`git diff HEAD\`).
 Review it for correctness/regressions; do NOT modify the source.
@@ -337,14 +398,8 @@ Review it (do not edit source), run \`$TEST_CMD\` here, and output ONLY the verd
 {pass,tests_run,tests_passed,issues[],summary}." \
     --model "${CLAUDE_WORKER_MODEL:-claude-opus-4-8}" \
     --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git diff:*)' 'Read' 'Grep' \
-    < /dev/null ) > "$RUN/verdict-glm.json"
+    < /dev/null ) > "$RUN/verdict-codex.json"
 
-# --- glm as verifier (via the adapter; same flags forwarded to claude). ---
-( cd "$WT" && "$SKILL/scripts/glm.sh" "This worktree already contains a candidate change
-(git diff HEAD). Review it (do not edit source), run \`$TEST_CMD\` here, and output ONLY the
-verdict JSON {pass,tests_run,tests_passed,issues[],summary}." \
-    --allowedTools 'Bash(pytest:*)' 'Bash(python3:*)' 'Bash(git diff:*)' 'Read' 'Grep' \
-    < /dev/null ) > "$RUN/verdict-glm.json"
 ```
 
 > Scope the `Bash(...)` whitelist to *your repo's actual* test command. With no edit
@@ -352,10 +407,10 @@ verdict JSON {pass,tests_run,tests_passed,issues[],summary}." \
 > applied — the verifier reviews and runs, nothing more. (codex's verifier is held
 > read-only-ish by the prompt; if you want it airtight, run it `-s read-only` and run
 > tests yourself, but then it can't execute the suite — the allowedTools route keeps
-> claude/glm both able-to-test and unable-to-edit.)
+> the claude verifier both able-to-test and unable-to-edit.)
 
 When the verifier needs the diff as text (e.g. for a focused review comment), it
-can read `$RUN/diff-glm.patch` — but tests must run in `$WT`, never `$REPO`.
+can read `$RUN/diff-codex.patch` — but tests must run in `$WT`, never `$REPO`.
 
 The schema file `references/verdict.schema.json` ships with this skill so codex's
 `--output-schema` works out of the box. Fold each `pass=false` verdict's `issues`
