@@ -121,19 +121,28 @@ fi
 if type pixi >/dev/null 2>&1; then
   eval "$(pixi completion --shell zsh)"
 
-  # pixi環境に入ったら1回だけ補完を仕込む
+  # pixi環境に入ったら補完を仕込む (シェルごとに一度)。
+  # 旧実装は登録後に hook 自体を消していたが、pixi shell の起動タイミングや
+  # 環境再インストール中に一度でも噛み合わないと、そのシェルでは二度と登録されず
+  # 補完が静かに死ぬことがあった。フラグ式にして「成功するまで毎 prompt リトライ・
+  # 成功後はガード 2 つで即 return」に変更 (負荷はほぼゼロ)。
   autoload -Uz add-zsh-hook
   _ros2_argcomplete_precmd() {
+    [[ -z "${_ROS2_ARGCOMPLETE_DONE:-}" ]] || return
     [[ -n "${PIXI_ENVIRONMENT_NAME:-}" ]] || return
     command -v register-python-argcomplete >/dev/null 2>&1 || return
 
     autoload -Uz bashcompinit && bashcompinit
-    eval "$(register-python-argcomplete ros2)"
-    eval "$(register-python-argcomplete colcon)"
-
-    # 一度設定できたら不要なので消す
-    add-zsh-hook -d precmd _ros2_argcomplete_precmd
-    unfunction _ros2_argcomplete_precmd 2>/dev/null
+    # NOTE: `eval "$(cmd)" || return` では捕まらない。eval の終了コードは cmd ではなく
+    # 評価された文字列のものなので、cmd が失敗して出力が空だと eval "" = 0 になり
+    # すり抜ける。環境再インストール中の典型的な壊れ方がまさにそれなので、
+    # 出力を変数で受けて「コマンドの成否」と「中身が空でないこと」を両方確かめる。
+    local out
+    out="$(register-python-argcomplete ros2 2>/dev/null)" || return
+    [[ -n "$out" ]] || return
+    eval "$out"
+    eval "$(register-python-argcomplete colcon 2>/dev/null)"
+    typeset -g _ROS2_ARGCOMPLETE_DONE=1
   }
 
   add-zsh-hook precmd _ros2_argcomplete_precmd
