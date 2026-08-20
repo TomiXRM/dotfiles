@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# chezmoi modify_ スクリプト: 現在の ~/.codex/config.toml を stdin で受け取り、
+# 「宣言的に持ちたいポリシー」だけを上書きした TOML を stdout に返す。
+#
+# 管理する（マシンをまたいで再現したい）:
+#   approvals_reviewer / default_permissions / approval_policy / [features]
+#
+# 管理しない（Codex 自身が実行中に書き換える、またはマシン固有）:
+#   model, model_reasoning_effort, service_tier  … /model や /fast で変わる好み
+#   [projects]      … trust_level。パスがマシンごとに違う
+#   [plugins] [marketplaces] [notice] [tui] [desktop] [mcp_servers]
+#   [hooks.state] [shell_environment_policy] … ランタイム状態と絶対パス
+#
+# TOML は Python 標準ライブラリで書き戻せない（tomllib は読み取り専用）ため、
+# 構造とコメントを保つテキスト編集で行う。
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+cat > "$tmp"
+
+python3 - "$tmp" <<'PYEOF'
+import re, sys
+
+# --- 管理対象（ここが唯一の真実） ---
+TOP = [
+    ('approvals_reviewer',  '"auto_review"'),
+    ('default_permissions', '":workspace"'),
+    ('approval_policy',     '"on-request"'),
+]
+FEATURES = [
+    ('hooks',               'true'),
+    ('js_repl',             'false'),
+    ('collaboration_modes', 'true'),   # Plan Mode (Shift+Tab)
+    ('collab',              'true'),
+]
+BANNER = "# ↓ chezmoi 管理 (dot_codex/modify_private_config.toml.tmpl)"
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        lines = f.read().splitlines()
+except Exception:
+    lines = []
+
+# 1) 最初のテーブル見出しで前文と本体に割る（TOML はトップレベルキーが先）
+split = next((i for i, l in enumerate(lines) if l.lstrip().startswith("[")), len(lines))
+preamble, rest = lines[:split], lines[split:]
+
+# 2) 前文から管理対象キーと過去のバナーを取り除く
+managed_top = {k for k, _ in TOP}
+def is_managed_top(line):
+    m = re.match(r'\s*([A-Za-z0-9_-]+)\s*=', line)
+    return bool(m) and m.group(1) in managed_top
+preamble = [l for l in preamble if not is_managed_top(l) and l.strip() != BANNER]
+while preamble and not preamble[-1].strip():
+    preamble.pop()
+
+# 3) 管理ブロックを前文の末尾に置く
+block = [BANNER] + [f"{k} = {v}" for k, v in TOP]
+preamble = (preamble + [""] if preamble else []) + block
+if rest:
+    preamble += [""]
+
+# 4) [features] を突き合わせる（未知のキーは消さずに残す）
+fi = next((i for i, l in enumerate(rest) if l.strip() == "[features]"), None)
+if fi is None:
+    rest += ["", "[features]"] + [f"{k} = {v}" for k, v in FEATURES]
+else:
+    end = next((j for j in range(fi + 1, len(rest))
+                if rest[j].lstrip().startswith("[")), len(rest))
+    body, seen = [], set()
+    for l in rest[fi + 1:end]:
+        m = re.match(r'\s*([A-Za-z0-9_-]+)\s*=', l)
+        if m:
+            key = m.group(1)
+            override = dict(FEATURES).get(key)
+            if override is not None:
+                body.append(f"{key} = {override}")
+                seen.add(key)
+                continue
+        body.append(l)
+    while body and not body[-1].strip():
+        body.pop()
+    body += [f"{k} = {v}" for k, v in FEATURES if k not in seen]
+    rest = rest[:fi + 1] + body + [""] + rest[end:]
+
+sys.stdout.write("\n".join(preamble + rest).rstrip("\n") + "\n")
+PYEOF
