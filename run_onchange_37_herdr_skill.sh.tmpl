@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# herdr skill は GitHub の master ではなく、インストール済みバイナリから取り出す。
+# master を追うと CLI とskillの内容がズレて、agent に存在しないフラグや古い挙動を
+# 教えてしまう（実際 0.8.2 では agent_not_ready / agent_blocked の記述が
+# master 版に無かった）。`herdr --skill` はバイナリ同梱なので必ず一致する。
+#
+# 下のバージョン文字列はテンプレート展開時に埋め込まれる。herdr を更新すると
+# この行が変わり、run_onchange が再発火して skill が更新される。
+{{- if lookPath "herdr" }}
+# herdr version: {{ output "herdr" "--version" | trim }}
+{{- else }}
+# herdr version: (not installed)
+{{- end }}
+
+echo "=== [run_onchange_37_herdr_skill] Started at $(date) ==="
+
+if ! command -v herdr >/dev/null 2>&1; then
+  echo "herdr not found; skipping skill generation."
+  exit 0
+fi
+
+DEST="$HOME/.claude/skills/herdr/SKILL.md"
+mkdir -p "$(dirname "$DEST")"
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+if ! herdr --skill > "$tmp" 2>/dev/null; then
+  echo "herdr --skill failed; leaving the existing skill untouched." >&2
+  exit 0
+fi
+if [ ! -s "$tmp" ]; then
+  echo "herdr --skill produced no output; leaving the existing skill untouched." >&2
+  exit 0
+fi
+
+mv "$tmp" "$DEST"
+trap - EXIT
+echo "Wrote $DEST from herdr $(herdr --version | tr -d '\n')"
