@@ -6,21 +6,17 @@
 
 ## セットアップ
 
-事前に age の鍵を復元します（無いと apply が暗号化ファイルの復号で失敗します。設計は [docs/architecture.md](docs/architecture.md) の「秘密情報」）。
-
-```bash
-mkdir -p ~/.config/chezmoi
-# Apple パスワードの「age key (chezmoi)」全文を貼り付ける
-$EDITOR ~/.config/chezmoi/key.txt
-chmod 600 ~/.config/chezmoi/key.txt
-```
-
-あわせて `~/.config/chezmoi/chezmoi.toml` に `encryption` / `[age]` を書きます（例は下の「`chezmoi.toml` について」）。
-
 新規マシン:
 
 ```bash
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply TomiXRM
+```
+
+秘密（`COSENSE_PAT` 等）は repo に入っていません。必要なマシンだけ手で作ります。無くても apply は通ります。
+
+```bash
+mkdir -p ~/.config/ai && chmod 600 ~/.config/ai/secrets.env
+$EDITOR ~/.config/ai/secrets.env   # export COSENSE_PAT=...
 ```
 
 `chezmoi` 導入済み:
@@ -44,13 +40,6 @@ chezmoi edit-config
 ```
 
 ```toml
-encryption = "age"
-
-[age]
-    useBuiltin = true
-    identity = "~/.config/chezmoi/key.txt"
-    recipient = "age1ythyyyga4jhspusm7r6pjnqnm6jh2v2x4ez86tu67dm3ngyghgrs6p5jtm" # 公開鍵（秘密ではない）
-
 [data.features]
 ros2 = false
 kicad = false
@@ -62,7 +51,6 @@ armNoneEabiVersion = "14.2.1-1.1.1"
 
 ```
 
-- `encryption` / `[age]`: 秘密情報（暗号化した環境変数）の復号設定。詳細は [docs/architecture.md](docs/architecture.md) の「秘密情報」
 - `features`
   - `features.ros2`: Ubuntu 専用の設定分岐。ROS 2 自体は install しない
   - `features.kicad`: 任意の KiCad install 分岐
