@@ -1,3 +1,45 @@
+{{- $profile := get . "profile" | default "full" -}}
+{{- if eq $profile "input" -}}
+# ===== input プロファイル =====
+# Ubuntu のキーボード/日本語入力設定だけを入れる（会社の PC、実験用 NUC 向け）。
+# 有効化は machine-local な ~/.config/chezmoi/chezmoi.toml に次を書く:
+#
+#   [data]
+#   profile = "input"
+#
+# 全部無視してから、入力まわりだけを名指しで戻すアローリスト方式。
+# 新しくファイルが増えても勝手に混ざらない（`*` に落ちる）。
+# 祖先ディレクトリは一度戻してから、その中の不要な子を再度落とす必要がある。
+*
+!.xinputrc
+
+!.config
+.config/*
+!.config/fcitx5
+!.config/toshy
+!.config/autostart
+.config/autostart/*
+!.config/autostart/org.fcitx.Fcitx5.desktop
+
+!.local
+.local/*
+!.local/share
+.local/share/*
+!.local/share/gnome-shell
+
+# スクリプトは run_onchange_ 等の接頭辞を除いた名前で判定される
+!30_ubuntu_input.sh
+!40_ubuntu_gnome_input.sh
+
+# .chezmoiexternal.toml の external は `*`（1階層のみ）にマッチしないため、
+# フルパスで名指しして落とす。ここを忘れると個人の zsh プラグインや skill が
+# input プロファイルに紛れ込む。
+.zsh/**
+.claude/**
+.local/share/pixi-skills
+
+{{- else -}}
+# ===== full プロファイル（既定） =====
 AGENTS.md
 Makefile
 README.md
@@ -10,6 +52,22 @@ docs
 packages
 tmp
 
+ros2_m1_native
+
+# ~/.claude : track ONLY agents/, rules/, skills/, settings.json. Ignore every
+# other direct child of ~/.claude (runtime state, caches, history, sessions,
+# plugins, secrets). `.claude/*` matches one level only, so files under
+# the un-ignored dirs below are kept.
+#
+# settings.json は modify_ スクリプトで差分マージするため管理対象に含める。
+# model / effortLevel / fastMode / autoMode は Claude Code が実行中に書き換える
+# ので、そのスクリプト側で管理対象から外し既存値を保持している。
+.claude/*
+!.claude/agents
+!.claude/rules
+!.claude/skills
+!.claude/settings.json
+
 {{- if eq .chezmoi.os "darwin" }}
 .xinputrc
 .config/autostart/org.fcitx.Fcitx5.desktop
@@ -18,8 +76,14 @@ tmp
 .local/share/gnome-shell/**
 {{- end }}
 
-.config/fcitx5/conf/cached_layouts
-
 {{- if eq .chezmoi.os "linux" }}
 .config/karabiner/**
 {{- end }}
+{{- end }}
+
+# ===== 全プロファイル共通（最後に評価させるため末尾に置く） =====
+# 生成物。source dir に落ちてくるが target には要らない。
+# input プロファイルの `!.config/toshy` より後に来る必要がある。
+.config/fcitx5/conf/cached_layouts
+.config/toshy/__pycache__
+.config/toshy/__pycache__/**

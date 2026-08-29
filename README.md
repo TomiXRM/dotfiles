@@ -33,6 +33,33 @@ mise install
 
 ## `chezmoi.toml` について
 
+## プロファイル
+
+`profile` でこの repo が何を配置するかを切り替えます。既定は `full`（全部）。
+
+| profile | 対象 | 用途 |
+|---|---|---|
+| `full`（既定） | 全部 | 自分の常用マシン |
+| `input` | Ubuntu のキーボード/日本語入力設定だけ | 会社の PC、実験用 NUC |
+
+`input` で入るのは fcitx5 の設定・`.xinputrc`・toshy の設定・xremap の GNOME 拡張と、
+それらを入れる 2 本のスクリプトだけです。zsh・mise・エージェント類・個人の
+git 設定などは一切配置されません。
+
+```bash
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init TomiXRM
+chezmoi edit-config     # [data] profile = "input" を書く
+chezmoi apply
+```
+
+```toml
+[data]
+profile = "input"
+```
+
+`.chezmoiignore.tmpl` は「全部無視してから入力まわりだけ名指しで戻す」アローリスト
+方式なので、repo にファイルが増えても `input` に勝手に混ざりません。
+
 任意機能は repo ではなく、そのマシンだけの chezmoi 設定で切り替えます。編集先は通常 `~/.config/chezmoi/chezmoi.toml` 。このファイルはgitで管理しない。
 
 ```bash
