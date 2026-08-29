@@ -45,35 +45,81 @@ cross-family verification left** — that is not graceful degradation, it is a d
 
 ---
 
-## codex (GPT family) — herdr transport (DEFAULT)
+## herdr transport (DEFAULT — codex も claude もこの手順)
 
 Run codex in a **neighbouring herdr pane** and push work into it. The human watches
 the pane live and can interrupt; `codex exec` hides all of that. Use this whenever
 `HERDR_ENV=1`.
 
-### 1. Get a codex pane (reuse before creating)
+### 1. Get a worker pane, then SAVE the route
+
+**必ず作ってから JSON で ID を取る。予測しない。**
+
+⚠️ **人間の作業中 agent を乗っ取らない。** `agent list` には人間が自分で立てた
+agent（`arch-codex` など）も並ぶ。再利用してよいのは **`cmo-` 接頭辞を持つ自分の
+ワーカーだけ**。それ以外は idle でも触らず、新しい pane を作る。
 
 ```bash
 source "$RUN/env.sh"
-# Reuse a codex agent that is already idle, else make one next to the Conductor.
-W="$(herdr agent list 2>/dev/null | python3 -c '
+KIND="${KIND:-codex}"                 # codex | claude
+NAME="cmo-$KIND"
+CWD="${WT:-$REPO}"                    # deep モードでは worktree を渡す
+
+# 自分の cmo-* ワーカーだけ再利用する（フィールドは `name`。無名 agent には存在しない）
+W="$(herdr agent list 2>/dev/null | python3 -c "
 import json,sys
-for a in json.load(sys.stdin)["result"]["agents"]:
-    if a.get("agent")=="codex" and a.get("agent_status") in ("idle","done"):
-        print(a["pane_id"]); break
-' || true)"
+for a in json.load(sys.stdin)['result']['agents']:
+    if a.get('name')=='$NAME' and a.get('agent')=='$KIND':
+        print(a['pane_id']); break
+" || true)"
 
 if [ -z "$W" ]; then
-  PANE="$(herdr pane split --current --direction right --cwd "$REPO" --no-focus \
-          | python3 -c 'import json,sys;print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')"
-  herdr agent start cmo-codex --kind codex --pane "$PANE"   # returns once codex is ready
-  W=cmo-codex
+  W="$(herdr pane split --current --direction right --cwd "$CWD" --no-focus \
+       | python3 -c 'import json,sys;print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')"
+  herdr agent start "$NAME" --kind "$KIND" --pane "$W"   # ready になってから返る
+  herdr pane rename "$W" "$NAME"      # 人間向けの表示だけ。制御には使わない
 fi
-echo "codex worker = $W"
+
+# ルートを保存する。以後この値だけを使う
+python3 - "$RUN/routes.json" "$KIND" "$NAME" "$W" <<'PYEOF'
+import json, os, sys
+path, kind, name, pane = sys.argv[1:5]
+d = json.load(open(path)) if os.path.exists(path) else {}
+d[kind] = {"agent_name": name, "pane_id": pane}
+json.dump(d, open(path, "w"), indent=2)
+PYEOF
+echo "$KIND worker = $NAME ($W)"
 ```
 
-`--no-focus` keeps the human's cursor where it was. In **deep** mode split with
-`--cwd "$RUN/wt-codex"` instead, so the pane already sits in its own worktree.
+`--no-focus` で人間のカーソルを動かさない。**deep モードでは `CWD` に
+`$RUN/wt-<worker>` を渡す**と、pane が最初からその worktree に居る。
+
+> 既存の無名 agent を自分のワーカーにしたいときだけ `herdr agent rename <pane_id> cmo-<kind>`
+> で名前を付けてから使う。名前が無いと照合できない。
+
+### 1b. 投げる前に必ず照合する
+
+```bash
+verify_route() {   # usage: verify_route codex
+  local kind="$1" name pane actual
+  name="$(python3 -c "import json;print(json.load(open('$RUN/routes.json'))['$kind']['agent_name'])")"
+  pane="$(python3 -c "import json;print(json.load(open('$RUN/routes.json'))['$kind']['pane_id'])")"
+  actual="$(herdr agent list | python3 -c "
+import json,sys
+for a in json.load(sys.stdin)['result']['agents']:
+    if a.get('name')=='$name': print(a['pane_id']); break
+")"
+  if [ "$actual" != "$pane" ]; then
+    echo "routing mismatch: agent=$name expected=$pane actual=${actual:-<none>}" >&2
+    return 1     # 探しに行かない。停止する
+  fi
+}
+verify_route codex || exit 1
+```
+
+agent name は **live occupant への一時的な別名**で、`agent list` では `name` フィールドに
+出る（無名 agent にはキー自体が無い）。agent が終了・release・置換されると消えるので
+毎回照合する。消えていたら立て直して routes.json を更新する。
 
 ### 2. Build the CMO envelope (this is what makes the injection visible)
 
@@ -175,22 +221,34 @@ PROMPT
 
 ## claude (Claude family — self / recursive worker)
 
-Two transports. **When the Conductor is Claude Code, prefer the native SubAgent
-(the `Agent` tool) over `claude -p`** — it sits in the parallel fan-out *next to* the
-codex Bash call. A freshly spawned SubAgent receives only the prompt you pass it (zero
-conversation context), so it judges *flat* — at least as **blind** as a separate
-`claude -p` process, which is exactly what blind-first wants. It also sidesteps every
-`claude -p` permission/stdin gotcha (Transport B), returns its result as the tool
-result (no `-o`/`> file` capture), takes a per-call `model:` for tier spread, and can
-run read-only-yet-able-to-test as a verifier.
+**既定は上の herdr transport と同じ**。`--kind claude` で pane に立て、同じ CMO
+エンベロープを投げ、同じ reply ファイルで受ける。codex と手順が完全に揃うので、
+ルーティング契約も blocked の扱いもそのまま使える。
 
-> ⚠️ **Blindness is the asset — don't leak it back out.** Give the SubAgent the *task
-> spec only*, never the Conductor's current hypothesis or the other workers' outputs;
-> the moment you pre-load your thinking, it stops being an independent vote.
-> **Diversity reminder still holds:** a Claude SubAgent is the *self / recursive* leg,
-> NOT a cross-family worker. The diversity payoff lives in codex — don't spawn
-> three Claude subs and call it cross-model. SubAgents are cheap to spawn; spend the
-> budget on the cross-family legs first.
+```bash
+herdr agent start cmo-claude --kind claude --pane "$PANE"
+herdr agent prompt cmo-claude "$(cat "$RUN/envelope-claude.txt")" --wait --timeout 600000
+```
+
+> ⚠️ **read-only を構造的には保証できない。** SubAgent の `Explore` は Edit/Write を
+> 持たないので構造的に read-only だったが、pane の claude は通常の Claude Code なので
+> ツールを剥奪できない。検証役に使うときは
+> (1) エンベロープの規約で「ソースを書き換えるな」と縛り、
+> (2) 終わったあと `git -C "$WT" status --porcelain` で差分が増えていないか確認する。
+> 規約だけを信じない。
+
+> **Blindness は資産。** 新しい pane に新しい agent を立てれば会話文脈はゼロなので、
+> SubAgent と同じくフラットに判断できる。Conductor の仮説や他ワーカーの出力を
+> 親切に渡した瞬間に独立性が消えるので、**タスク仕様だけ**を渡す。
+> **多様性リマインダ**: claude は Conductor と同ファミリの *再帰/自己* レグであって、
+> クロスファミリではない。予算は codex に優先して割く。
+
+---
+
+## claude — SubAgent フォールバック（可視性を捨ててよい時だけ）
+
+herdr の外にいる、または「人間に見せる必要のない使い捨ての読み取り調査」で pane を
+消費したくない場合に限る。**既定では使わない**（人間から不可視になる）。
 
 ### Transport A — native SubAgent (default under Claude Code)
 
