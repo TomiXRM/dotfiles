@@ -29,13 +29,6 @@
   pull.args = ["--ff-only"]
   refreshPeriod = "168h"
 
-# herdr skill: 単一ファイルなので36MBのリポジトリをcloneせず、raw fileだけ取得する。
-# codex側は dot_codex/skills/symlink_herdr.tmpl から ~/.claude/skills/herdr を参照。
-[".claude/skills/herdr/SKILL.md"]
-  type = "file"
-  url = "https://raw.githubusercontent.com/herdrdev/herdr/master/skills/herdr/SKILL.md"
-  refreshPeriod = "168h"
-
 # ros2-engineering-skills: Claude側はプラグイン(~/.claude/plugins)で入るが、Codexは
 # プラグイン機構を持たないため単独cloneして dot_codex/skills/ からsymlinkする。
 # リポジトリroot直下にSKILL.mdとreferences/があるので、root自体をskillディレクトリとして参照する。
