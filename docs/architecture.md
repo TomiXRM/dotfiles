@@ -98,27 +98,26 @@ armNoneEabiVersion = "15.2.1-1.1.1"
 
 ## 秘密情報
 
-環境変数の秘密（API キー等）は age で暗号化して repo に置く。
+秘密は repo に置かない。**必要なマシンで手で作る**。
 
-- 対象: `~/.config/ai/secrets.env`（source は `private_dot_config/ai/encrypted_private_secrets.env.age`）
-- `dot_zshrc.tmpl` が存在する時だけ source する。apply 後は `$HOME` に 0600 の平文で配置される
-- 復号の設定は machine-local の `~/.config/chezmoi/chezmoi.toml` に置く（repo には入れない）
+- 対象: `~/.config/ai/secrets.env`（0600、chezmoi 管理外）
+- `dot_zshrc.tmpl` は存在する時だけ source するので、無いマシンでは何も起きない
 
-```toml
-encryption = "age"
-
-[age]
-    useBuiltin = true
-    identity = "~/.config/chezmoi/key.txt"
-    recipient = "age1ythyyyga4jhspusm7r6pjnqnm6jh2v2x4ez86tu67dm3ngyghgrs6p5jtm"
+```bash
+mkdir -p ~/.config/ai
+cat > ~/.config/ai/secrets.env <<'EOF'
+export COSENSE_PAT=...
+EOF
+chmod 600 ~/.config/ai/secrets.env
 ```
 
-- 秘密鍵は `~/.config/chezmoi/key.txt`（0600、repo 外）。バックアップとして Apple パスワードの項目「age key (chezmoi)」に key.txt 全文を保存する
-- recipient（公開鍵）は秘密ではない。key.txt のコメント行にも同じ値がある
-- `useBuiltin = true` のため runtime に age バイナリは不要（chezmoi 内蔵実装で復号する）。外部 `age` が要るのは `age-keygen` する時だけ
-- 編集は `chezmoi edit --apply <target-path>`（復号→編集→再暗号化→apply まで一括）
-- 秘密を追加する時は target に置いてから `chezmoi add --encrypt <target-path>`
-- 新規マシンでは **`chezmoi init --apply` の前に** key.txt と上記 `[age]` 設定を復元する。無いと encrypted file の復号で apply が失敗する
+以前は age で暗号化して repo に入れていたが、やめた。実際に秘密が要るのは
+Cosense を使う一部のマシンだけで、全マシンに鍵の復元を強いる（`chezmoi init`
+の前に key.txt を置かないと apply が失敗する）コストに見合わなかった。
+キーボード設定だけを会社の PC に入れる、といった軽い使い方の障害にもなっていた。
+
+> 履歴には暗号化済みファイルが残る。復号鍵（Apple パスワードの
+> 「age key (chezmoi)」）は消さずに保管しておく。
 
 ## テンプレートと ignore
 

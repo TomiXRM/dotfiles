@@ -35,3 +35,13 @@
   type = "file"
   url = "https://raw.githubusercontent.com/herdrdev/herdr/master/skills/herdr/SKILL.md"
   refreshPeriod = "168h"
+
+# ros2-engineering-skills: Claude側はプラグイン(~/.claude/plugins)で入るが、Codexは
+# プラグイン機構を持たないため単独cloneして dot_codex/skills/ からsymlinkする。
+# リポジトリroot直下にSKILL.mdとreferences/があるので、root自体をskillディレクトリとして参照する。
+[".local/share/ros2-engineering-skills"]
+  type = "git-repo"
+  url = "https://github.com/dbwls99706/ros2-engineering-skills.git"
+  clone.args = ["--depth", "1"]
+  pull.args = ["--ff-only"]
+  refreshPeriod = "168h"
