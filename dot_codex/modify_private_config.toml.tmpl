@@ -28,8 +28,11 @@ FEATURES = [
     ('hooks',               'true'),
     ('js_repl',             'false'),
     ('collaboration_modes', 'true'),   # Plan Mode (Shift+Tab)
-    ('collab',              'true'),
+    ('multi_agent',         'true'),   # 旧 collab。0.149 で collab は非推奨になった
 ]
+# Codex 側で非推奨になったキー。残っていると毎ターン警告が出るので消す。
+# 「未知のキーは残す」既定の例外として、ここに挙げたものだけ明示的に落とす。
+FEATURES_REMOVE = ['collab']
 # 権限プロファイル。丸ごと chezmoi のものなので、既存を消して毎回書き直す。
 # :workspace（ワークスペース書き込みのみ・ネットワーク遮断）を土台に、
 # gh / git が使うホストだけ開ける。これが無いと gh のたびに承認を求められる。
@@ -90,6 +93,8 @@ else:
         m = re.match(r'\s*([A-Za-z0-9_-]+)\s*=', l)
         if m:
             key = m.group(1)
+            if key in FEATURES_REMOVE:
+                continue                      # 非推奨キーは落とす
             override = dict(FEATURES).get(key)
             if override is not None:
                 body.append(f"{key} = {override}")
