@@ -39,9 +39,18 @@ fi
 # ===== 秘密の環境変数 (age暗号化、chezmoi管理) =====
 [[ -r "$HOME/.config/ai/secrets.env" ]] && source "$HOME/.config/ai/secrets.env"
 
-# ===== 標準設定 =====
+# ===== 履歴設定 =====
+# NOTE: zshはHISTFILEにデフォルト値を持たない。未設定だと履歴を読み書きせず、
+# zsh-autosuggestions(strategy=history)の候補も常に空になる。
+HISTFILE="$HOME/.zsh_history"
 HISTSIZE=10000
 SAVEHIST=10000
+setopt extended_history    # タイムスタンプ付きで記録
+setopt hist_ignore_dups    # 直前と同じコマンドは記録しない
+setopt hist_ignore_space   # 空白始まりのコマンドは記録しない
+setopt share_history       # 複数ターミナル間で履歴を共有
+
+# ===== 標準設定 =====
 
 alias ll='ls -alF'
 alias la='ls -A'
