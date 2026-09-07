@@ -1,0 +1,14 @@
+# oh-my-pi (omp) のプラグイン。run_onchange_38_omp が `omp plugin install` で導入する。
+#
+# 形式: <npmパッケージ名>
+# 導入済みの一覧は `omp plugin list --json`、実体は ~/.omp/plugins/omp-plugins.lock.json。
+# ~/.omp 自体は1.2GBのランタイム状態(node_modules・puppeteer・DB・ログ)なので
+# chezmoi管理下には置かない。ここで宣言して再インストールできれば足りる。
+
+pi-btw
+pi-add-dir
+pi-context-view
+pi-web-access
+pi-lens
+@plannotator/pi-extension
+@earendil-works/pi-transcribe
