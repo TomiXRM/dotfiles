@@ -25,6 +25,19 @@ if ! gnome-extensions list >/dev/null 2>&1; then
   exit 0
 fi
 
+# CapsLock を Control にする。GNOME 標準の XKB オプションなので、
+# キーリマッパー（toshy 等）を常駐させる必要がない。Wayland でも即時反映される。
+if command -v gsettings >/dev/null 2>&1; then
+  want="['ctrl:nocaps']"
+  have="$(gsettings get org.gnome.desktop.input-sources xkb-options 2>/dev/null || true)"
+  if [ "$have" = "$want" ]; then
+    echo "xkb-options already set to ctrl:nocaps."
+  else
+    gsettings set org.gnome.desktop.input-sources xkb-options "$want" \
+      && echo "Set xkb-options to ctrl:nocaps (CapsLock -> Control)."
+  fi
+fi
+
 if ! gnome-extensions list | grep -q '^xremap@k0kubun\.com$'; then
   echo "xremap extension not present in GNOME Shell yet."
   exit 0

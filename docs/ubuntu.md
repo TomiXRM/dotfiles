@@ -9,7 +9,8 @@
 - 対象 distro: Ubuntu 24.04 (`noble`)
 - desktop environment: GNOME
 - shell: `zsh`
-- 入力系: `fcitx5` + `mozc` + `Toshy` + `xremap` GNOME extension
+- 入力系: `fcitx5` + `mozc` + `xremap` GNOME extension
+- CapsLock → Control は GNOME の XKB オプション（`ctrl:nocaps`）で行う。キーリマッパーの常駐は不要
 
 ## Ubuntu レイヤ
 
@@ -20,7 +21,7 @@ flowchart TB
     B["15_mise_install<br/>mise bootstrap"]
     C["20_ubuntu_gui<br/>GUI apt / flatpak"]
     C2["25_ubuntu_snap<br/>snap packages"]
-    D["30_ubuntu_input<br/>input apt / Toshy"]
+    D["30_ubuntu_input<br/>input apt"]
     E["40_ubuntu_gnome_input<br/>GNOME extension 有効化"]
     F["手動<br/>mise install / ROS 2"]
 
@@ -154,13 +155,11 @@ flowchart TB
 - `fcitx5`
 - `fcitx5-mozc`
 - `fcitx5-config-qt`
-- Toshy の install / 状態管理
 - xremap GNOME extension の有効化
 
 補足:
 
 - input package が入っていれば `apt-get update` をスキップする
-- Toshy は `TOSHY_REF` を見て状態を管理する
 - 既存 install が desired ref を満たしていれば再 install しない
 - GNOME extension の有効化は `run_*` に分け、GUI セッションがある時に再試行できるようにしている
 
@@ -171,7 +170,6 @@ flowchart TB
 - [private_profile](../private_dot_config/private_fcitx5/private_profile)
 - [private_config](../private_dot_config/private_fcitx5/private_config)
 - [org.fcitx.Fcitx5.desktop](../private_dot_config/autostart/org.fcitx.Fcitx5.desktop)
-- [toshy_config.py](../private_dot_config/toshy/toshy_config.py)
 - [extension.js](../private_dot_local/private_share/gnome-shell/extensions/xremap@k0kubun.com/extension.js)
 
 ## Feature Flags
@@ -279,7 +277,6 @@ sequenceDiagram
 - `command -v codex`
 - `command -v claude`
 - `command -v fcitx5`
-- `test -f ~/.config/toshy/toshy_config.py`
 - `gsettings get org.gnome.shell enabled-extensions`
 
 任意確認:

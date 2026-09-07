@@ -42,7 +42,7 @@ mise install
 | `full`（既定） | 全部 | 自分の常用マシン |
 | `input` | Ubuntu のキーボード/日本語入力設定だけ | 会社の PC、実験用 NUC |
 
-`input` で入るのは fcitx5 の設定・`.xinputrc`・toshy の設定・xremap の GNOME 拡張と、
+`input` で入るのは fcitx5 の設定・`.xinputrc`・xremap の GNOME 拡張と、
 それらを入れる 2 本のスクリプトだけです。zsh・mise・エージェント類・個人の
 git 設定などは一切配置されません。
 
