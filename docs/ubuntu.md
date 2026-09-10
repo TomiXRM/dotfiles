@@ -75,8 +75,8 @@ flowchart TB
 補足:
 
 - `mise install` は引き続き手動実行
-- `git-delta` は apt ではなく [dot_mise.toml](../dot_mise.toml) の `github:dandavison/delta` として `mise install` で入れる
-- Node.js LTS と Codex / Claude Code も [dot_mise.toml](../dot_mise.toml) から `mise install` で入れる
+- `git-delta` は apt ではなく [private_dot_config/mise/config.toml](../private_dot_config/mise/config.toml) の `github:dandavison/delta` として `mise install` で入れる
+- Node.js LTS と Codex / Claude Code も [private_dot_config/mise/config.toml](../private_dot_config/mise/config.toml) から `mise install` で入れる
 - `dot_zprofile` が `~/.local/bin` を `PATH` に入れる
 
 ### 3. GUI apt と flatpak
