@@ -29,6 +29,11 @@ FEATURES = [
     ('js_repl',             'false'),
     ('collaboration_modes', 'true'),   # Plan Mode (Shift+Tab)
     ('multi_agent',         'true'),   # 旧 collab。0.149 で collab は非推奨になった
+    # サブエージェントの待機。既定は min=10s / default=30s で、モデルが最短10秒間隔で
+    # ポーリングしトークンを食う。2分に引き上げて往復を減らす。
+    # 制約: min <= default <= max（max の既定は 1h 以上あるので触らない）
+    ('multi_agent_v2.min_wait_timeout_ms',     '120000'),
+    ('multi_agent_v2.default_wait_timeout_ms', '120000'),
 ]
 # Codex 側で非推奨になったキー。残っていると毎ターン警告が出るので消す。
 # 「未知のキーは残す」既定の例外として、ここに挙げたものだけ明示的に落とす。
@@ -69,7 +74,7 @@ preamble, rest = lines[:split], lines[split:]
 # 2) 前文から管理対象キーと過去のバナーを取り除く
 managed_top = {k for k, _ in TOP}
 def is_managed_top(line):
-    m = re.match(r'\s*([A-Za-z0-9_-]+)\s*=', line)
+    m = re.match(r'\s*([A-Za-z0-9_.-]+)\s*=', line)
     return bool(m) and m.group(1) in managed_top
 preamble = [l for l in preamble if not is_managed_top(l) and l.strip() != BANNER]
 while preamble and not preamble[-1].strip():
@@ -90,7 +95,7 @@ else:
                 if rest[j].lstrip().startswith("[")), len(rest))
     body, seen = [], set()
     for l in rest[fi + 1:end]:
-        m = re.match(r'\s*([A-Za-z0-9_-]+)\s*=', l)
+        m = re.match(r'\s*([A-Za-z0-9_.-]+)\s*=', l)
         if m:
             key = m.group(1)
             if key in FEATURES_REMOVE:
