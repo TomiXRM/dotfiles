@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# oh-my-pi (omp) のプラグインと設定を宣言的に復元する。
+#
+# ~/.omp は 1.2GB のランタイム状態（node_modules・puppeteer・sqlite・ログ）なので
+# ディレクトリ自体は chezmoi 管理下に置かない。復元に必要なのは
+#   1) どのプラグインが入っているか（packages/omp-plugins.txt）
+#   2) 好みの設定（下の CONFIG）
+# の2つだけで、どちらも omp 自身の CLI から適用できる。
+#
+# 設定を config.yml の直接編集ではなく `omp config set` で入れているのは、
+# 同ファイルに omp がランタイム状態（setupVersion・dev.autoqaConsent 等）も
+# 書くため。CLI 経由なら omp 側の状態を壊さずに済む。
+
+echo "=== [run_onchange_38_omp] Started at $(date) ==="
+
+if ! command -v omp >/dev/null 2>&1; then
+  echo "omp not found; skipping (mise が入れる: github:can1357/oh-my-pi)."
+  exit 0
+fi
+
+# --- プラグイン -------------------------------------------------------------
+
+plugins=(
+{{- range (splitList "\n" (include "packages/omp-plugins.txt")) }}
+{{- $line := trim . }}
+{{- if and $line (not (hasPrefix "#" $line)) }}
+  {{ quote $line }}
+{{- end }}
+{{- end }}
+)
+
+if [ "${#plugins[@]}" -gt 0 ]; then
+  installed="$(omp plugin list --json 2>/dev/null | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for group in (d.values() if isinstance(d, dict) else []):
+    for p in (group if isinstance(group, list) else []):
+        if isinstance(p, dict) and p.get('name'):
+            print(p['name'])
+" || true)"
+
+  for p in "${plugins[@]}"; do
+    if printf '%s\n' "$installed" | grep -Fxq "$p"; then
+      echo "$p already installed; skipping."
+    else
+      echo "Installing omp plugin: $p"
+      omp plugin install "$p" || echo "  failed: $p (続行)" >&2
+    fi
+  done
+fi
+
+# --- 設定 -------------------------------------------------------------------
+# key<TAB>value。value が JSON なら record/boolean としてそのまま渡る。
+# setupVersion / dev.* / auth.* は omp 側の状態と資格情報なので管理しない。
+
+while IFS=$'\t' read -r key value; do
+  [ -n "$key" ] || continue
+  current="$(omp config get "$key" 2>/dev/null || true)"
+  if [ "$current" = "$value" ]; then
+    echo "$key already set; skipping."
+  else
+    omp config set "$key" "$value" >/dev/null && echo "Set $key"
+  fi
+done <<'CONFIG'
+symbolPreset	nerd
+composer.shape	band
+theme.dark	titanium
+theme.light	light
+browser.relay	true
+CONFIG
+
+echo "modelRoles は好みの変動が大きいので管理対象外（omp config set modelRoles '<json>' で設定できる）"
