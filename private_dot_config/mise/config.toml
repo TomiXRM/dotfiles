@@ -1,5 +1,12 @@
 # mise configuration
 # See: https://mise.jdx.dev/configuration.html
+#
+# 置き場所について: ここ (~/.config/mise/config.toml) が mise の「真のグローバル設定」で、
+# カレントディレクトリを問わず効く。以前は ~/.mise.toml に置いていたが、あれは
+# $HOME 配下でしか読まれない。外付けドライブ (/Volumes/...) や /tmp で作業すると
+# 全ツールのバージョンが未設定になり、shim が
+#   "No version is set for shim: starship"
+# で落ちてプロンプトもシンタックスハイライトも壊れた。同じ轍を踏まないこと。
 
 [tools]
 # Python package manager (replaces pip, poetry, etc)
@@ -33,6 +40,9 @@ bun = "latest"
 
 # Family tree tool
 "github:trasta298/keifu" = "latest"
+
+# Mermaid CLI — 図のレンダリング
+"npm:@mermaid-js/mermaid-cli" = "latest"
 
 [settings]
 # Enable experimental features
