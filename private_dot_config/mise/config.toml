@@ -54,3 +54,8 @@ experimental = true
 
 # Keep runtime installation explicit and predictable.
 not_found_auto_install = false
+
+# 新しいリリースを伏せない。mise の既定は数日経つまで ls-remote / upgrade から
+# 新版を隠す(供給網対策)。実際 claude 2.1.257 が「昨日出たばかり」という理由で
+# 候補に出ず、MISE_MINIMUM_RELEASE_AGE=0 を手で付けて回避する羽目になった。
+minimum_release_age = "0s"
