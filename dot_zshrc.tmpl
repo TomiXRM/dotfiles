@@ -82,6 +82,11 @@ if command -v chezmoi >/dev/null 2>&1; then
   eval "$(chezmoi completion zsh)"
 fi
 
+# herdr completion
+if command -v herdr >/dev/null 2>&1; then
+  eval "$(herdr completion zsh)"
+fi
+
 # fzf shell integration
 if command -v fzf >/dev/null 2>&1 && fzf --zsh >/dev/null 2>&1; then
   source <(fzf --zsh)
