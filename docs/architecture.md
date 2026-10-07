@@ -119,6 +119,14 @@ Cosense を使う一部のマシンだけで、全マシンに鍵の復元を強
 > 履歴には暗号化済みファイルが残る。復号鍵（Apple パスワードの
 > 「age key (chezmoi)」）は消さずに保管しておく。
 
+## omp の共有設定
+
+`mise install` で omp を導入した後、`chezmoi apply` を再実行する。`run_onchange_38_omp.sh.tmpl` がプラグイン一覧と表示設定を同期し、`skills.enableClaudeUser` と `skills.enableCodexUser` を有効にする。omp は `~/.claude/skills` と `~/.codex/skills` を直接探索するため、skill のコピーや追加 symlink は作らない。第三者 skill は従来どおり `packages/skills.txt` と `run_onchange_35_skills.sh.tmpl` で同期する。
+
+`private_dot_omp/agent/modify_private_mcp.json.tmpl` は `~/.omp/agent/mcp.json` の既存項目を保ちながら Datadog の公開 MCP URL を設定する。認証は omp 側の OAuth で行う。接続認証はマシンごとに必要で、設定の配置だけでは接続成功を意味しない。環境変数を使う MCP の秘密は管理外の `~/.config/ai/secrets.env` に置き、シェルから読み込む。秘密が無くても apply は通る。
+
+`~/.omp` の認証情報、会話履歴、プラグイン実体、キャッシュ、その他のランタイム状態は管理しない。`input` profile では omp、skill、MCP を配置しない。
+
 ## テンプレートと ignore
 
 - file の存在自体を OS で切り替える時は `.chezmoiignore.tmpl` を使う
