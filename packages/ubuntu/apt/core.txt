@@ -17,6 +17,7 @@ ripgrep
 fzf
 zoxide
 imagemagick
+yt-dlp
 htop
 arp-scan
 net-tools
