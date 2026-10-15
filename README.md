@@ -31,6 +31,8 @@ chezmoi init --apply TomiXRM
 mise install
 ```
 
+omp の共有 skill・MCP・管理外の状態については [設計メモ](docs/architecture.md#omp-の共有設定) を参照。`mise install` 後に `chezmoi apply` を再実行すると omp の設定が同期されます。
+
 ## `chezmoi.toml` について
 
 ## プロファイル

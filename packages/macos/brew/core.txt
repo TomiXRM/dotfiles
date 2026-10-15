@@ -7,6 +7,8 @@ fzf
 zoxide
 htop
 imagemagick
+poppler
+yt-dlp
 
 gh
 ghq

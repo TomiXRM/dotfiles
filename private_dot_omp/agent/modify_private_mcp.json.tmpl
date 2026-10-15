@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Keep OMP's local MCP state and reconcile shareable server definitions."""
+import json
+import sys
+
+try:
+    current = json.load(sys.stdin)
+    if not isinstance(current, dict):
+        current = {}
+except (ValueError, OSError):
+    current = {}
+
+servers = current.setdefault("mcpServers", {})
+if not isinstance(servers, dict):
+    servers = current["mcpServers"] = {}
+servers["datadog"] = {
+    "type": "http",
+    "url": "https://mcp.datadoghq.com/v1/mcp?toolsets=core,apm,alerting",
+}
+json.dump(current, sys.stdout, indent=2, ensure_ascii=False)
+sys.stdout.write("\n")

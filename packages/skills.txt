@@ -4,3 +4,4 @@
 #
 # 形式: <owner/repo> <skill名>
 github/gh-stack gh-stack
+MaryCache/imozuru imozuru
